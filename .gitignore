@@ -1,0 +1,26 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Dependency folders
+vendor/
+node_modules/
+
+# Env / secrets
+.env
+.env.*
+includes/config.local.php
+
+# Uploaded/runtime files if you add them later
+uploads/
+tmp/
+cache/
+
+# XAMPP / system noise
+*.zip
+*.rar
