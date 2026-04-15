@@ -120,6 +120,75 @@ function validateCsrfToken($submittedToken): bool
     return hash_equals($sessionToken, $submittedToken);
 }
 
+function setFlashMessage(string $type, string $message): void
+{
+    $_SESSION['flash_message'] = [
+        'type' => trim($type),
+        'message' => trim($message),
+    ];
+}
+
+function getFlashMessage(): ?array
+{
+    if (!isset($_SESSION['flash_message']) || !is_array($_SESSION['flash_message'])) {
+        return null;
+    }
+
+    $flash = $_SESSION['flash_message'];
+    unset($_SESSION['flash_message']);
+
+    $type = trim((string) ($flash['type'] ?? 'info'));
+    $message = trim((string) ($flash['message'] ?? ''));
+
+    if ($message === '') {
+        return null;
+    }
+
+    if ($type === '') {
+        $type = 'info';
+    }
+
+    return [
+        'type' => $type,
+        'message' => $message,
+    ];
+}
+
+function setOldInput(array $input): void
+{
+    $_SESSION['old_input'] = [];
+
+    foreach ($input as $key => $value) {
+        if (!is_string($key) || $key === '') {
+            continue;
+        }
+
+        if (is_array($value) || is_object($value)) {
+            continue;
+        }
+
+        $_SESSION['old_input'][$key] = is_null($value) ? '' : (string) $value;
+    }
+}
+
+function getOldInput(string $key, $default = '')
+{
+    if (!isset($_SESSION['old_input']) || !is_array($_SESSION['old_input'])) {
+        return $default;
+    }
+
+    if (!array_key_exists($key, $_SESSION['old_input'])) {
+        return $default;
+    }
+
+    return $_SESSION['old_input'][$key];
+}
+
+function clearOldInput(): void
+{
+    unset($_SESSION['old_input']);
+}
+
 function getClientIpAddress(): string
 {
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
