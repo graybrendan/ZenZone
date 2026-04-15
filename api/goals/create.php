@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/validation.php';
 
 requireLogin();
 
@@ -11,13 +12,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $title = trim($_POST['title'] ?? '');
-$category = trim($_POST['category'] ?? '');
-$cadence_type = trim($_POST['cadence_type'] ?? '');
+$categoriesInput = $_POST['categories'] ?? [];
+$cadence_number = isset($_POST['cadence_number']) ? (int) $_POST['cadence_number'] : 0;
+$cadence_unit = trim($_POST['cadence_unit'] ?? '');
 $start_date = trim($_POST['start_date'] ?? '');
 $end_date = trim($_POST['end_date'] ?? '');
 $notes = trim($_POST['notes'] ?? '');
 
-$allowedCadences = ['daily', 'weekly', 'monthly', 'custom'];
+$allowedCategories = ['body', 'mind', 'soul'];
+$allowedCadenceUnits = ['day', 'week', 'month'];
 $priorityLimits = [
     'daily' => 3,
     'weekly' => 2,
@@ -28,12 +31,43 @@ if ($title === '') {
     die('Goal title is required.');
 }
 
-if (!in_array($cadence_type, $allowedCadences, true)) {
-    die('Invalid cadence type.');
+if ($cadence_number <= 0) {
+    die('Cadence number must be at least 1.');
 }
 
-if ($category === '') {
-    $category = null;
+if (!in_array($cadence_unit, $allowedCadenceUnits, true)) {
+    die('Invalid cadence unit.');
+}
+
+if (!is_array($categoriesInput)) {
+    die('Invalid category selection.');
+}
+
+$selectedCategories = array_values(array_unique(array_filter(
+    array_map('trim', $categoriesInput),
+    static function ($value): bool {
+        return $value !== '';
+    }
+)));
+
+if (empty($selectedCategories)) {
+    die('At least one category is required.');
+}
+
+if (array_diff($selectedCategories, $allowedCategories)) {
+    die('Invalid category.');
+}
+
+$category = implode(',', $selectedCategories);
+
+if ($cadence_number === 1 && $cadence_unit === 'day') {
+    $cadence_type = 'daily';
+} elseif ($cadence_number === 1 && $cadence_unit === 'week') {
+    $cadence_type = 'weekly';
+} elseif ($cadence_number === 1 && $cadence_unit === 'month') {
+    $cadence_type = 'monthly';
+} else {
+    $cadence_type = 'custom';
 }
 
 if ($start_date === '') {
@@ -46,6 +80,18 @@ if ($end_date === '') {
 
 if ($notes === '') {
     $notes = null;
+}
+
+if ($start_date !== null && !isValidDateYmd($start_date)) {
+    die('Invalid start date.');
+}
+
+if ($end_date !== null && !isValidDateYmd($end_date)) {
+    die('Invalid end date.');
+}
+
+if ($start_date !== null && $end_date !== null && $end_date < $start_date) {
+    die('End date cannot be before start date.');
 }
 
 $db = getDB();
@@ -78,6 +124,8 @@ $stmt = $db->prepare("
         user_id,
         title,
         category,
+        cadence_number,
+        cadence_unit,
         cadence_type,
         status,
         is_priority,
@@ -88,6 +136,8 @@ $stmt = $db->prepare("
         :user_id,
         :title,
         :category,
+        :cadence_number,
+        :cadence_unit,
         :cadence_type,
         'active',
         :is_priority,
@@ -101,6 +151,8 @@ $stmt->execute([
     'user_id' => $_SESSION['user_id'],
     'title' => $title,
     'category' => $category,
+    'cadence_number' => $cadence_number,
+    'cadence_unit' => $cadence_unit,
     'cadence_type' => $cadence_type,
     'is_priority' => $isPriority,
     'start_date' => $start_date,
@@ -108,5 +160,7 @@ $stmt->execute([
     'notes' => $notes,
 ]);
 
-header('Location: ' . BASE_URL . '/goals/index.php');
+$newGoalId = (int) $db->lastInsertId();
+
+header('Location: ' . BASE_URL . '/goals/details.php?id=' . $newGoalId);
 exit;

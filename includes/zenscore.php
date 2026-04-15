@@ -178,7 +178,27 @@ function zenzone_rebuild_daily_summary(PDO $pdo, int $userId, string $checkinDat
         'checkin_date' => $checkinDate,
     ]);
 
-    $morningAnchorScore = (float) $anchorStmt->fetchColumn();
+    $anchorScore = $anchorStmt->fetchColumn();
+
+    if ($anchorScore === false) {
+        // Fallback when older data has no explicit daily anchor.
+        $anchorFallbackStmt = $pdo->prepare("
+            SELECT entry_score
+            FROM check_ins
+            WHERE user_id = :user_id
+              AND checkin_date = :checkin_date
+            ORDER BY created_at ASC, id ASC
+            LIMIT 1
+        ");
+        $anchorFallbackStmt->execute([
+            'user_id' => $userId,
+            'checkin_date' => $checkinDate,
+        ]);
+
+        $anchorScore = $anchorFallbackStmt->fetchColumn();
+    }
+
+    $morningAnchorScore = (float) $anchorScore;
 
     $latestStmt = $pdo->prepare("
         SELECT

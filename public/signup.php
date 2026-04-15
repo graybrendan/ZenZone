@@ -1,4 +1,11 @@
-<?php ?>
+<?php
+require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/session.php';
+
+requireGuest();
+
+$authMessage = getAuthPageMessage('signup', $_GET);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,7 +16,13 @@
 <body>
     <h1>Create Account</h1>
 
+    <?php if ($authMessage !== ''): ?>
+        <p><?php echo htmlspecialchars($authMessage); ?></p>
+    <?php endif; ?>
+
     <form method="POST" action="../api/auth/register.php">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
+
         <label for="full_name">Full Name</label><br>
         <input type="text" id="full_name" name="full_name" required><br><br>
 

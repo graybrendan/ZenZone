@@ -20,3 +20,13 @@ function isValidScaleRating($value, $min = 1, $max = 7) {
     $value = (int)$value;
     return $value >= $min && $value <= $max;
 }
+
+function isValidDateYmd($value) {
+    if (!is_string($value) || $value === '') {
+        return false;
+    }
+
+    $date = DateTime::createFromFormat('Y-m-d', $value);
+
+    return $date && $date->format('Y-m-d') === $value;
+}

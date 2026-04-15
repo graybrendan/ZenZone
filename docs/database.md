@@ -141,6 +141,20 @@ Main expected relationships:
 - avoid storing the same meaning in multiple places unless there is a good reason
 - schema changes should be reflected in `sql/schema.sql`
 
+## Confirmed active tables (as used by current PHP code)
+- `users`
+- `baseline_assessments`
+- `check_ins`
+- `daily_zenscore_summary`
+- `goals`
+- `goal_checkins`
+
+
+## Import troubleshooting (phpMyAdmin / XAMPP)
+- If you see `#1064` with text like `@@ -70,25 +73,65 @@`, the file being imported is a **git diff/patch**, not raw SQL. Re-download or open `sql/schema.sql` directly from the repo and import that exact file.
+- If you see `#1451 - Cannot delete or update a parent row`, run the full `sql/schema.sql` file (from the top) so the database reset executes before table creation.
+- Confirm the filename is `sql/schema.sql` (not `sql/shema.sql`).
+
 ## Current source of truth
 The actual implementation should be checked against:
 - `sql/schema.sql`

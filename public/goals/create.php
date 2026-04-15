@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/validation.php';
 
 requireLogin();
 
@@ -11,24 +12,55 @@ $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title'] ?? '');
-    $category = trim($_POST['category'] ?? '');
-    $cadenceType = trim($_POST['cadence_type'] ?? '');
+    $categoriesInput = $_POST['categories'] ?? [];
+    $cadenceNumber = isset($_POST['cadence_number']) ? (int) $_POST['cadence_number'] : 0;
+    $cadenceUnit = trim($_POST['cadence_unit'] ?? '');
     $startDate = trim($_POST['start_date'] ?? '');
     $endDate = trim($_POST['end_date'] ?? '');
     $notes = trim($_POST['notes'] ?? '');
 
-    $allowedCategories = ['mindset', 'performance', 'recovery'];
-    $allowedCadences = ['daily', 'weekly', 'monthly', 'custom'];
+    $allowedCategories = ['body', 'mind', 'soul'];
+    $allowedCadenceUnits = ['day', 'week', 'month'];
+    $selectedCategories = [];
+
+    if (is_array($categoriesInput)) {
+        $selectedCategories = array_values(array_unique(array_filter(
+            array_map('trim', $categoriesInput),
+            static function ($value): bool {
+                return $value !== '';
+            }
+        )));
+    }
 
     if ($title === '') {
         $error = 'Goal title is required.';
-    } elseif (!in_array($category, $allowedCategories, true)) {
-        $error = 'Please choose a valid category.';
-    } elseif (!in_array($cadenceType, $allowedCadences, true)) {
-        $error = 'Please choose a valid cadence.';
+    } elseif (empty($selectedCategories)) {
+        $error = 'Select at least one category.';
+    } elseif (array_diff($selectedCategories, $allowedCategories)) {
+        $error = 'Please choose valid categories.';
+    } elseif ($cadenceNumber <= 0) {
+        $error = 'Cadence number must be at least 1.';
+    } elseif (!in_array($cadenceUnit, $allowedCadenceUnits, true)) {
+        $error = 'Please choose a valid cadence unit.';
+    } elseif ($startDate !== '' && !isValidDateYmd($startDate)) {
+        $error = 'Please enter a valid start date.';
+    } elseif ($endDate !== '' && !isValidDateYmd($endDate)) {
+        $error = 'Please enter a valid end date.';
     } elseif ($startDate !== '' && $endDate !== '' && $endDate < $startDate) {
         $error = 'End date cannot be before start date.';
     } else {
+        if ($cadenceNumber === 1 && $cadenceUnit === 'day') {
+            $cadenceType = 'daily';
+        } elseif ($cadenceNumber === 1 && $cadenceUnit === 'week') {
+            $cadenceType = 'weekly';
+        } elseif ($cadenceNumber === 1 && $cadenceUnit === 'month') {
+            $cadenceType = 'monthly';
+        } else {
+            $cadenceType = 'custom';
+        }
+
+        $category = implode(',', $selectedCategories);
+
         $priorityLimits = [
             'daily' => 3,
             'weekly' => 2,
@@ -58,49 +90,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $insertStmt = $db->prepare("
-            INSERT INTO goals (
-                user_id,
-                title,
-                category,
-                cadence_type,
-                status,
-                is_priority,
-                start_date,
-                end_date,
-                notes,
-                created_at,
-                updated_at
-            ) VALUES (
-                :user_id,
-                :title,
-                :category,
-                :cadence_type,
-                'active',
-                :is_priority,
-                :start_date,
-                :end_date,
-                :notes,
-                CURRENT_TIMESTAMP,
-                CURRENT_TIMESTAMP
-            )
-        ");
+        try {
+            $insertStmt = $db->prepare("
+                INSERT INTO goals (
+                    user_id,
+                    title,
+                    category,
+                    cadence_number,
+                    cadence_unit,
+                    cadence_type,
+                    status,
+                    is_priority,
+                    start_date,
+                    end_date,
+                    notes,
+                    created_at,
+                    updated_at
+                ) VALUES (
+                    :user_id,
+                    :title,
+                    :category,
+                    :cadence_number,
+                    :cadence_unit,
+                    :cadence_type,
+                    'active',
+                    :is_priority,
+                    :start_date,
+                    :end_date,
+                    :notes,
+                    CURRENT_TIMESTAMP,
+                    CURRENT_TIMESTAMP
+                )
+            ");
 
-        $insertStmt->execute([
-            'user_id' => $userId,
-            'title' => $title,
-            'category' => $category,
-            'cadence_type' => $cadenceType,
-            'is_priority' => $isPriority,
-            'start_date' => $startDate !== '' ? $startDate : null,
-            'end_date' => $endDate !== '' ? $endDate : null,
-            'notes' => $notes !== '' ? $notes : null,
-        ]);
+            $insertStmt->execute([
+                'user_id' => $userId,
+                'title' => $title,
+                'category' => $category,
+                'cadence_number' => $cadenceNumber,
+                'cadence_unit' => $cadenceUnit,
+                'cadence_type' => $cadenceType,
+                'is_priority' => $isPriority,
+                'start_date' => $startDate !== '' ? $startDate : null,
+                'end_date' => $endDate !== '' ? $endDate : null,
+                'notes' => $notes !== '' ? $notes : null,
+            ]);
 
-        $newGoalId = (int) $db->lastInsertId();
+            $newGoalId = (int) $db->lastInsertId();
 
-        header('Location: ' . BASE_URL . '/goals/details.php?id=' . $newGoalId);
-        exit;
+            header('Location: ' . BASE_URL . '/goals/details.php?id=' . $newGoalId);
+            exit;
+        } catch (PDOException $exception) {
+            $error = 'Unable to create goal right now. Please try again.';
+        }
     }
 }
 ?>
@@ -198,23 +240,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             required
         >
 
-        <label for="category">Category</label>
-        <select id="category" name="category" required>
-            <option value="">Select a category</option>
-            <option value="mindset" <?php echo (($_POST['category'] ?? '') === 'mindset') ? 'selected' : ''; ?>>Mindset</option>
-            <option value="performance" <?php echo (($_POST['category'] ?? '') === 'performance') ? 'selected' : ''; ?>>Performance</option>
-            <option value="recovery" <?php echo (($_POST['category'] ?? '') === 'recovery') ? 'selected' : ''; ?>>Recovery</option>
-        </select>
+        <label>Categories</label>
+        <?php
+            $postedCategories = $_POST['categories'] ?? [];
+            if (!is_array($postedCategories)) {
+                $postedCategories = [];
+            }
+        ?>
+        <label><input type="checkbox" id="category_body" name="categories[]" value="body" <?php echo in_array('body', $postedCategories, true) ? 'checked' : ''; ?>> Body</label>
+        <label><input type="checkbox" id="category_mind" name="categories[]" value="mind" <?php echo in_array('mind', $postedCategories, true) ? 'checked' : ''; ?>> Mind</label>
+        <label><input type="checkbox" id="category_soul" name="categories[]" value="soul" <?php echo in_array('soul', $postedCategories, true) ? 'checked' : ''; ?>> Soul</label>
 
-        <label for="cadence_type">Cadence</label>
-        <select id="cadence_type" name="cadence_type" required>
-            <option value="">Select a cadence</option>
-            <option value="daily" <?php echo (($_POST['cadence_type'] ?? '') === 'daily') ? 'selected' : ''; ?>>Daily</option>
-            <option value="weekly" <?php echo (($_POST['cadence_type'] ?? '') === 'weekly') ? 'selected' : ''; ?>>Weekly</option>
-            <option value="monthly" <?php echo (($_POST['cadence_type'] ?? '') === 'monthly') ? 'selected' : ''; ?>>Monthly</option>
-            <option value="custom" <?php echo (($_POST['cadence_type'] ?? '') === 'custom') ? 'selected' : ''; ?>>Custom</option>
-        </select>
-        <p class="help">Daily, weekly, and monthly goals can become priority goals if a slot is available.</p>
+        <label for="cadence_number">Cadence</label>
+        <div class="actions">
+            <input
+                type="number"
+                id="cadence_number"
+                name="cadence_number"
+                min="1"
+                value="<?php echo htmlspecialchars($_POST['cadence_number'] ?? '1'); ?>"
+                required
+            >
+            <select id="cadence_unit" name="cadence_unit" required>
+                <option value="day" <?php echo (($_POST['cadence_unit'] ?? 'day') === 'day') ? 'selected' : ''; ?>>Day</option>
+                <option value="week" <?php echo (($_POST['cadence_unit'] ?? '') === 'week') ? 'selected' : ''; ?>>Week</option>
+                <option value="month" <?php echo (($_POST['cadence_unit'] ?? '') === 'month') ? 'selected' : ''; ?>>Month</option>
+            </select>
+        </div>
+        <p class="help">Use 1 per day/week/month for priority-eligible cadence. Higher numbers are treated as custom cadence.</p>
 
         <label for="start_date">Start Date</label>
         <input

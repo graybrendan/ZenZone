@@ -20,6 +20,8 @@ $goalStmt = $db->prepare("
         user_id,
         title,
         category,
+        cadence_number,
+        cadence_unit,
         cadence_type,
         status,
         is_priority,
@@ -44,6 +46,45 @@ if (!$goal) {
     die('Goal not found.');
 }
 
+function getCadenceWindow(string $unit, DateTimeImmutable $today): array
+{
+    if ($unit === 'week') {
+        $start = $today->modify('monday this week');
+        $end = $start->modify('+6 days');
+    } elseif ($unit === 'month') {
+        $start = $today->modify('first day of this month');
+        $end = $today->modify('last day of this month');
+    } else {
+        $start = $today;
+        $end = $today;
+    }
+
+    return [$start->format('Y-m-d'), $end->format('Y-m-d')];
+}
+
+$cadenceNumber = max(1, (int) ($goal['cadence_number'] ?? 1));
+$cadenceUnit = $goal['cadence_unit'] ?? 'day';
+if (!in_array($cadenceUnit, ['day', 'week', 'month'], true)) {
+    $cadenceUnit = 'day';
+}
+
+[$windowStart, $windowEnd] = getCadenceWindow($cadenceUnit, new DateTimeImmutable($today));
+
+$periodCountStmt = $db->prepare("
+    SELECT COUNT(*) 
+    FROM goal_checkins
+    WHERE goal_id = :goal_id
+      AND user_id = :user_id
+      AND checkin_date BETWEEN :start_date AND :end_date
+");
+$periodCountStmt->execute([
+    'goal_id' => $goalId,
+    'user_id' => $userId,
+    'start_date' => $windowStart,
+    'end_date' => $windowEnd
+]);
+$checkinsThisWindow = (int) $periodCountStmt->fetchColumn();
+
 $todaysCheckinStmt = $db->prepare("
     SELECT
         goal_id,
@@ -57,6 +98,7 @@ $todaysCheckinStmt = $db->prepare("
     WHERE goal_id = :goal_id
       AND user_id = :user_id
       AND checkin_date = :checkin_date
+    ORDER BY created_at DESC, id DESC
     LIMIT 1
 ");
 $todaysCheckinStmt->execute([
@@ -91,7 +133,8 @@ $priorityLabel = !empty($goal['is_priority']) ? 'Priority Goal' : 'Non-Priority 
 $isActive = ($goal['status'] === 'active');
 $isPaused = ($goal['status'] === 'paused');
 $isCompleted = ($goal['status'] === 'completed');
-$showCheckinForm = $isActive;
+$remainingCheckins = max(0, $cadenceNumber - $checkinsThisWindow);
+$showCheckinForm = $isActive && $remainingCheckins > 0;
 
 function safeValue($value, $fallback = 'None')
 {
@@ -171,14 +214,6 @@ function safeValue($value, $fallback = 'None')
             margin-top: 12px;
         }
 
-        .status-pill {
-            display: inline-block;
-            padding: 4px 8px;
-            border: 1px solid #aaa;
-            border-radius: 999px;
-            font-size: 0.9rem;
-            margin-left: 6px;
-        }
     </style>
 </head>
 <body>
@@ -192,24 +227,17 @@ function safeValue($value, $fallback = 'None')
 
         <div class="row">
             <strong>Category:</strong>
-            <?php echo safeValue($goal['category']); ?>
+            <?php echo safeValue(implode(', ', array_map('ucfirst', array_filter(array_map('trim', explode(',', (string) ($goal['category'] ?? ''))))))); ?>
         </div>
 
         <div class="row">
             <strong>Cadence:</strong>
-            <?php echo safeValue($goal['cadence_type']); ?>
+            <?php echo htmlspecialchars($cadenceNumber . ' per ' . $cadenceUnit); ?>
         </div>
 
         <div class="row">
             <strong>Status:</strong>
             <?php echo safeValue(ucfirst($goal['status'])); ?>
-            <?php if ($isActive): ?>
-                <span class="status-pill">Active</span>
-            <?php elseif ($isPaused): ?>
-                <span class="status-pill">Paused</span>
-            <?php elseif ($isCompleted): ?>
-                <span class="status-pill">Completed</span>
-            <?php endif; ?>
         </div>
 
         <div class="row">
@@ -277,11 +305,14 @@ function safeValue($value, $fallback = 'None')
 
     <div class="card">
         <h2>Today's Check-In</h2>
+        <p class="muted">
+            <?php echo htmlspecialchars($checkinsThisWindow . ' of ' . $cadenceNumber . ' check-ins used this ' . $cadenceUnit . '.'); ?>
+        </p>
 
         <?php if ($showCheckinForm): ?>
             <?php if ($todaysCheckin): ?>
                 <p>
-                    <strong>Current status for today:</strong>
+                    <strong>Latest status for today:</strong>
                     <?php echo ((int) $todaysCheckin['is_complete'] === 1) ? 'Completed today' : 'Not completed today'; ?>
                 </p>
             <?php else: ?>
@@ -313,7 +344,11 @@ function safeValue($value, $fallback = 'None')
                 </p>
             </form>
         <?php else: ?>
-            <p class="muted">Daily check-ins are only available while this goal is active.</p>
+            <?php if (!$isActive): ?>
+                <p class="muted">Check-ins are only available while this goal is active.</p>
+            <?php else: ?>
+                <p class="muted">You have completed your goal for today! <?php echo htmlspecialchars($cadenceUnit); ?>.</p>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 

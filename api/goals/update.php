@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/validation.php';
 
 requireLogin();
 
@@ -26,7 +27,7 @@ if (!in_array($action, $allowedActions, true)) {
 $db = getDB();
 
 $goalStmt = $db->prepare("
-    SELECT id, user_id, title, category, cadence_type, status, is_priority, start_date, end_date, notes
+    SELECT id, user_id, title, category, cadence_number, cadence_unit, cadence_type, status, is_priority, start_date, end_date, notes
     FROM goals
     WHERE id = :id
       AND user_id = :user_id
@@ -80,26 +81,65 @@ function calculatePriorityForActiveGoal(PDO $db, int $userId, int $goalId, strin
 switch ($action) {
     case 'edit':
         $title = trim($_POST['title'] ?? '');
-        $category = trim($_POST['category'] ?? '');
-        $cadenceType = trim($_POST['cadence_type'] ?? '');
+        $categoriesInput = $_POST['categories'] ?? [];
+        $cadenceNumber = isset($_POST['cadence_number']) ? (int) $_POST['cadence_number'] : 0;
+        $cadenceUnit = trim($_POST['cadence_unit'] ?? '');
         $startDate = trim($_POST['start_date'] ?? '');
         $endDate = trim($_POST['end_date'] ?? '');
         $notes = trim($_POST['notes'] ?? '');
 
-        $allowedCadences = ['daily', 'weekly', 'monthly', 'custom'];
+        $allowedCategories = ['body', 'mind', 'soul'];
+        $allowedCadenceUnits = ['day', 'week', 'month'];
 
         if ($title === '') {
             die('Goal title is required.');
         }
 
-        if (!in_array($cadenceType, $allowedCadences, true)) {
-            die('Invalid cadence type.');
+        if (!is_array($categoriesInput)) {
+            die('Invalid category selection.');
         }
 
-        $category = ($category === '') ? null : $category;
+        $selectedCategories = array_values(array_unique(array_filter(
+            array_map('trim', $categoriesInput),
+            static function ($value): bool {
+                return $value !== '';
+            }
+        )));
+
+        if (empty($selectedCategories) || array_diff($selectedCategories, $allowedCategories)) {
+            die('Invalid category.');
+        }
+
+        if ($cadenceNumber <= 0) {
+            die('Cadence number must be at least 1.');
+        }
+
+        if (!in_array($cadenceUnit, $allowedCadenceUnits, true)) {
+            die('Invalid cadence unit.');
+        }
+
+        if ($cadenceNumber === 1 && $cadenceUnit === 'day') {
+            $cadenceType = 'daily';
+        } elseif ($cadenceNumber === 1 && $cadenceUnit === 'week') {
+            $cadenceType = 'weekly';
+        } elseif ($cadenceNumber === 1 && $cadenceUnit === 'month') {
+            $cadenceType = 'monthly';
+        } else {
+            $cadenceType = 'custom';
+        }
+
+        $category = implode(',', $selectedCategories);
         $startDate = ($startDate === '') ? null : $startDate;
         $endDate = ($endDate === '') ? null : $endDate;
         $notes = ($notes === '') ? null : $notes;
+
+        if ($startDate !== null && !isValidDateYmd($startDate)) {
+            die('Invalid start date.');
+        }
+
+        if ($endDate !== null && !isValidDateYmd($endDate)) {
+            die('Invalid end date.');
+        }
 
         if ($startDate !== null && $endDate !== null && $endDate < $startDate) {
             die('End date cannot be before start date.');
@@ -120,6 +160,8 @@ switch ($action) {
             UPDATE goals
             SET title = :title,
                 category = :category,
+                cadence_number = :cadence_number,
+                cadence_unit = :cadence_unit,
                 cadence_type = :cadence_type,
                 is_priority = :is_priority,
                 start_date = :start_date,
@@ -132,6 +174,8 @@ switch ($action) {
         $updateStmt->execute([
             'title' => $title,
             'category' => $category,
+            'cadence_number' => $cadenceNumber,
+            'cadence_unit' => $cadenceUnit,
             'cadence_type' => $cadenceType,
             'is_priority' => $isPriority,
             'start_date' => $startDate,

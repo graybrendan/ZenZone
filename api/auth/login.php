@@ -4,15 +4,33 @@ require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../includes/validation.php';
 
+requireGuest();
+
+function failLogin(string $errorCode = 'invalid_credentials', array $extraParams = []): void
+{
+    $query = array_merge(['error' => $errorCode], $extraParams);
+    authRedirect('login.php', $query);
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    die('Invalid request method.');
+    authRedirect('login.php');
+}
+
+if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+    failLogin('invalid_request');
+}
+
+if (isLoginRateLimited()) {
+    failLogin('too_many_attempts', [
+        'retry_after' => getLoginRetryAfterSeconds(),
+    ]);
 }
 
 $email = cleanInput($_POST['email'] ?? '');
 $password = $_POST['password'] ?? '';
 
-if ($email === '' || $password === '') {
-    die('Email and password are required.');
+if ($email === '' || $password === '' || !isValidEmail($email)) {
+    failLogin();
 }
 
 try {
@@ -28,21 +46,23 @@ try {
 
     $user = $stmt->fetch();
 
-    if (!$user) {
-        die('Invalid email or password.');
+    if (!$user || !password_verify($password, $user['password_hash'])) {
+        recordFailedLoginAttempt();
+
+        if (isLoginRateLimited()) {
+            failLogin('too_many_attempts', [
+                'retry_after' => getLoginRetryAfterSeconds(),
+            ]);
+        }
+
+        failLogin('invalid_credentials');
     }
 
-    if (!password_verify($password, $user['password_hash'])) {
-        die('Invalid email or password.');
-    }
+    clearFailedLoginAttempts();
+    loginUser($user);
 
-    $_SESSION['user_id'] = $user['id'];
-    $_SESSION['user_name'] = $user['full_name'];
-    $_SESSION['user_email'] = $user['email'];
-
-    header("Location: " . BASE_URL . "/dashboard.php");
-    exit;
-
+    authRedirect('dashboard.php');
 } catch (PDOException $e) {
-    die("Login failed: " . $e->getMessage());
+    error_log('Login failed: ' . $e->getMessage());
+    failLogin('login_failed');
 }

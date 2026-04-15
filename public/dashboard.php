@@ -191,9 +191,9 @@ $completedGoalsCount = (int) $completedGoalsStmt->fetchColumn();
             <?php if ($baselineComplete === 1): ?>
                 <?php if ($currentDailyScore !== null): ?>
                     <p><strong>Today's ZenScore:</strong> <?php echo htmlspecialchars($currentDailyScore); ?></p>
-                    <p><strong>Baseline Score:</strong> <?php echo htmlspecialchars($baselineScore); ?></p>
+                    <p><strong>Score:</strong> <?php echo htmlspecialchars($baselineScore); ?></p>
                 <?php else: ?>
-                    <p><strong>Baseline Score:</strong> <?php echo htmlspecialchars($baselineScore); ?></p>
+                    <p><strong>Score:</strong> <?php echo htmlspecialchars($baselineScore); ?></p>
                     <p>No daily ZenScore summary yet for today.</p>
                 <?php endif; ?>
             <?php else: ?>
@@ -235,7 +235,10 @@ $completedGoalsCount = (int) $completedGoalsStmt->fetchColumn();
     </div>
 
     <div class="section">
-        <a class="button-link" href="logout.php">Log out</a>
+        <form method="POST" action="../api/auth/logout.php">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
+            <button class="button-link" type="submit">Log out</button>
+        </form>
     </div>
 </body>
 </html>

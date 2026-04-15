@@ -14,6 +14,8 @@ $stmt = $db->prepare("
         user_id,
         title,
         category,
+        cadence_number,
+        cadence_unit,
         cadence_type,
         status,
         is_priority,
@@ -62,12 +64,18 @@ function formatGoalMeta(array $goal): string
     $parts = [];
 
     if (!empty($goal['category'])) {
-        $parts[] = ucfirst($goal['category']);
+        $categories = array_filter(array_map('trim', explode(',', (string) $goal['category'])));
+        if (!empty($categories)) {
+            $parts[] = implode(', ', array_map('ucfirst', $categories));
+        }
     }
 
-    if (!empty($goal['cadence_type'])) {
-        $parts[] = ucfirst($goal['cadence_type']);
+    $cadenceNumber = max(1, (int) ($goal['cadence_number'] ?? 1));
+    $cadenceUnit = $goal['cadence_unit'] ?? 'day';
+    if (!in_array($cadenceUnit, ['day', 'week', 'month'], true)) {
+        $cadenceUnit = 'day';
     }
+    $parts[] = $cadenceNumber . ' per ' . $cadenceUnit;
 
     return !empty($parts) ? implode(' • ', $parts) : 'No details';
 }
