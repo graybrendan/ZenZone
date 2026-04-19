@@ -2,8 +2,7 @@ FROM php:8.2-apache
 
 RUN docker-php-ext-install pdo pdo_mysql
 
-RUN echo "LoadModule mpm_worker_module modules/mod_mpm_worker.so" > /etc/apache2/mods-enabled/mpm_worker.load && \
-    echo "# mpm_prefork disabled" > /etc/apache2/mods-enabled/mpm_prefork.load
+RUN rm /etc/apache2/mods-enabled/mpm_prefork.load
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 
