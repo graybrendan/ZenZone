@@ -11,30 +11,46 @@ $pdo = getDB();
 $userId = (int) $_SESSION['user_id'];
 $today = date('Y-m-d');
 
-$error = null;
-$feedback = null;
+$labels = zenzone_labels();
+$flash = getFlashMessage();
+$todaySummary = zenzone_get_daily_summary($pdo, $userId, $today);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        $scores = zenzone_validate_scores($_POST);
-        $activityContext = $_POST['activity_context'] ?? null;
-
-        $inserted = zenzone_insert_checkin($pdo, $userId, $scores, $activityContext);
-        zenzone_rebuild_daily_summary($pdo, $userId, $inserted['checkin_date']);
-
-        $summary = zenzone_get_daily_summary($pdo, $userId, $inserted['checkin_date']);
-        $feedback = zenzone_get_feedback($scores);
-        $feedback['checkin_type'] = $inserted['checkin_type'];
-        $feedback['latest_zenscore'] = $inserted['zenscore'];
-        $feedback['daily_zenscore'] = $summary ? (float) $summary['daily_zenscore'] : $inserted['zenscore'];
-        $feedback['total_checkins'] = $summary ? (int) $summary['total_checkins'] : 1;
-    } catch (Throwable $e) {
-        $error = $e->getMessage();
-    }
+$formValues = ['activity_context' => ''];
+foreach (array_keys($labels) as $field) {
+    $formValues[$field] = 4;
 }
 
-$todaySummary = zenzone_get_daily_summary($pdo, $userId, $today);
-$labels = zenzone_labels();
+if ((string) getOldInput('checkin_form', '') === 'checkin') {
+    foreach (array_keys($labels) as $field) {
+        $value = (int) getOldInput($field, '4');
+        if ($value < 1 || $value > 7) {
+            $value = 4;
+        }
+
+        $formValues[$field] = $value;
+    }
+
+    $formValues['activity_context'] = (string) getOldInput('activity_context', '');
+    clearOldInput();
+}
+
+function h($value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+
+function flashClass(string $type): string
+{
+    if ($type === 'error') {
+        return 'danger';
+    }
+
+    if ($type === 'success') {
+        return 'success';
+    }
+
+    return 'secondary';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -48,9 +64,12 @@ $labels = zenzone_labels();
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
                 <h1 class="h3 mb-0">Check In</h1>
-                <a href="trends.php" class="btn btn-outline-dark">View Trends</a>
+                <div class="d-flex gap-2">
+                    <a href="dashboard.php" class="btn btn-outline-secondary">Back to Dashboard</a>
+                    <a href="trends.php" class="btn btn-outline-dark">View Trends</a>
+                </div>
             </div>
 
             <?php if ($todaySummary): ?>
@@ -58,46 +77,38 @@ $labels = zenzone_labels();
                     <div class="card-body">
                         <div class="row text-center">
                             <div class="col-md-4">
-                                <div class="text-muted small">Today’s ZenScore</div>
-                                <div class="fs-3 fw-bold"><?= htmlspecialchars(number_format((float) $todaySummary['daily_zenscore'], 2)) ?></div>
+                                <div class="text-muted small">Today's ZenScore</div>
+                                <div class="fs-3 fw-bold"><?= h(number_format((float) $todaySummary['daily_zenscore'], 2)) ?></div>
                             </div>
                             <div class="col-md-4">
                                 <div class="text-muted small">Latest ZenScore</div>
-                                <div class="fs-3 fw-bold"><?= htmlspecialchars(number_format((float) $todaySummary['latest_zenscore'], 2)) ?></div>
+                                <div class="fs-3 fw-bold"><?= h(number_format((float) $todaySummary['latest_zenscore'], 2)) ?></div>
                             </div>
                             <div class="col-md-4">
                                 <div class="text-muted small">Check-Ins Today</div>
-                                <div class="fs-3 fw-bold"><?= htmlspecialchars((string) $todaySummary['total_checkins']) ?></div>
+                                <div class="fs-3 fw-bold"><?= h((string) $todaySummary['total_checkins']) ?></div>
                             </div>
                         </div>
                     </div>
                 </div>
             <?php endif; ?>
 
-            <?php if ($error): ?>
-                <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-            <?php endif; ?>
-
-            <?php if ($feedback): ?>
-                <div class="alert alert-success">
-                    <div class="fw-semibold mb-2"><?= htmlspecialchars($feedback['headline']) ?></div>
-                    <div class="mb-2">Check-in type: <?= htmlspecialchars(ucfirst($feedback['checkin_type'])) ?></div>
-                    <div class="mb-2">Latest ZenScore: <?= htmlspecialchars(number_format($feedback['latest_zenscore'], 2)) ?></div>
-                    <div class="mb-2">Today’s ZenScore: <?= htmlspecialchars(number_format($feedback['daily_zenscore'], 2)) ?></div>
-                    <div class="mb-2">Today’s check-ins: <?= htmlspecialchars((string) $feedback['total_checkins']) ?></div>
-                    <div class="mb-2"><?= htmlspecialchars($feedback['insight']) ?></div>
-                    <div><?= htmlspecialchars($feedback['recommendation']) ?></div>
+            <?php if ($flash): ?>
+                <div class="alert alert-<?= h(flashClass((string) ($flash['type'] ?? ''))) ?>">
+                    <?= h((string) ($flash['message'] ?? '')) ?>
                 </div>
             <?php endif; ?>
 
             <div class="card">
                 <div class="card-body">
-                    <form method="post">
+                    <form method="post" action="../api/checkin/submit.php">
+                        <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
+
                         <?php foreach ($labels as $field => $label): ?>
                             <div class="mb-4">
-                                <label for="<?= htmlspecialchars($field) ?>" class="form-label d-flex justify-content-between">
-                                    <span><?= htmlspecialchars($label) ?></span>
-                                    <span id="<?= htmlspecialchars($field) ?>_value"><?= isset($_POST[$field]) ? (int) $_POST[$field] : 4 ?></span>
+                                <label for="<?= h($field) ?>" class="form-label d-flex justify-content-between">
+                                    <span><?= h($label) ?></span>
+                                    <span id="<?= h($field) ?>_value"><?= h((string) $formValues[$field]) ?></span>
                                 </label>
                                 <input
                                     type="range"
@@ -105,10 +116,10 @@ $labels = zenzone_labels();
                                     min="1"
                                     max="7"
                                     step="1"
-                                    id="<?= htmlspecialchars($field) ?>"
-                                    name="<?= htmlspecialchars($field) ?>"
-                                    value="<?= isset($_POST[$field]) ? (int) $_POST[$field] : 4 ?>"
-                                    oninput="document.getElementById('<?= htmlspecialchars($field) ?>_value').textContent = this.value"
+                                    id="<?= h($field) ?>"
+                                    name="<?= h($field) ?>"
+                                    value="<?= h((string) $formValues[$field]) ?>"
+                                    oninput="document.getElementById('<?= h($field) ?>_value').textContent = this.value"
                                     required
                                 >
                             </div>
@@ -121,7 +132,8 @@ $labels = zenzone_labels();
                                 id="activity_context"
                                 name="activity_context"
                                 rows="3"
-                            ><?= isset($_POST['activity_context']) ? htmlspecialchars((string) $_POST['activity_context']) : '' ?></textarea>
+                                maxlength="1000"
+                            ><?= h($formValues['activity_context']) ?></textarea>
                         </div>
 
                         <button type="submit" class="btn btn-dark">Submit Check-In</button>

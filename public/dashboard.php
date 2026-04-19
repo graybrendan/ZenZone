@@ -219,6 +219,7 @@ $completedGoalsCount = (int) $completedGoalsStmt->fetchColumn();
 
         <div class="actions">
             <a class="button-link" href="checkin.php">Check In</a>
+            <a class="button-link" href="trends.php">View Trends</a>
             <a class="button-link" href="goals/index.php">Today’s Goals</a>
             <a class="button-link" href="goals/create.php">Create Goal</a>
         </div>
