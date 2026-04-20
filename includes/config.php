@@ -31,7 +31,14 @@ function getFirstEnvOrDefault(array $keys, string $default): string
 
 function getMysqlUrlParts(): array
 {
-    $url = getFirstEnvOrDefault(['DATABASE_URL', 'MYSQL_URL', 'MYSQL_PUBLIC_URL'], '');
+    $url = getFirstEnvOrDefault([
+        'DATABASE_URL',
+        'DATABASE_PRIVATE_URL',
+        'DATABASE_PUBLIC_URL',
+        'MYSQL_URL',
+        'MYSQL_PRIVATE_URL',
+        'MYSQL_PUBLIC_URL',
+    ], '');
     if ($url === '') {
         return [];
     }
@@ -83,11 +90,11 @@ if ($appEnv === '') {
 
 $mysqlUrlParts = getMysqlUrlParts();
 
-$dbHost = getFirstEnvOrDefault(['DB_HOST', 'MYSQLHOST'], $mysqlUrlParts['host'] ?? '127.0.0.1');
-$dbPortRaw = getFirstEnvOrDefault(['DB_PORT', 'MYSQLPORT'], $mysqlUrlParts['port'] ?? '3306');
-$dbName = getFirstEnvOrDefault(['DB_NAME', 'MYSQLDATABASE'], $mysqlUrlParts['name'] ?? 'zenzone');
-$dbUser = getFirstEnvOrDefault(['DB_USER', 'MYSQLUSER'], $mysqlUrlParts['user'] ?? 'root');
-$dbPass = getFirstEnvOrDefault(['DB_PASS', 'MYSQLPASSWORD'], $mysqlUrlParts['pass'] ?? '');
+$dbHost = getFirstEnvOrDefault(['DB_HOST', 'DBHOST', 'MYSQLHOST'], $mysqlUrlParts['host'] ?? '127.0.0.1');
+$dbPortRaw = getFirstEnvOrDefault(['DB_PORT', 'DBPORT', 'MYSQLPORT'], $mysqlUrlParts['port'] ?? '3306');
+$dbName = getFirstEnvOrDefault(['DB_NAME', 'DB_DATABASE', 'MYSQLDATABASE'], $mysqlUrlParts['name'] ?? 'zenzone');
+$dbUser = getFirstEnvOrDefault(['DB_USER', 'DB_USERNAME', 'MYSQLUSER'], $mysqlUrlParts['user'] ?? 'root');
+$dbPass = getFirstEnvOrDefault(['DB_PASS', 'DB_PASSWORD', 'MYSQLPASSWORD'], $mysqlUrlParts['pass'] ?? '');
 
 $dbPort = ctype_digit($dbPortRaw) ? (int) $dbPortRaw : 3306;
 if ($dbPort < 1 || $dbPort > 65535) {
