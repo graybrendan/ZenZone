@@ -26,7 +26,7 @@ if (isLoginRateLimited()) {
     ]);
 }
 
-$email = cleanInput($_POST['email'] ?? '');
+$email = strtolower(cleanInput($_POST['email'] ?? ''));
 $password = $_POST['password'] ?? '';
 
 if ($email === '' || $password === '' || !isValidEmail($email)) {
@@ -45,8 +45,57 @@ try {
     $stmt->execute(['email' => $email]);
 
     $user = $stmt->fetch();
+    $storedHash = '';
+    if ($user && isset($user['password_hash']) && is_string($user['password_hash'])) {
+        $storedHash = trim($user['password_hash']);
+    }
 
-    if (!$user || !password_verify($password, $user['password_hash'])) {
+    $isValidLogin = false;
+    if ($user && $storedHash !== '') {
+        $isValidLogin = password_verify($password, $storedHash);
+
+        if ($isValidLogin) {
+            if (password_needs_rehash($storedHash, PASSWORD_DEFAULT)) {
+                $newHash = password_hash($password, PASSWORD_DEFAULT);
+                if (is_string($newHash) && $newHash !== '') {
+                    $rehashStmt = $db->prepare("
+                        UPDATE users
+                        SET password_hash = :password_hash
+                        WHERE id = :id
+                        LIMIT 1
+                    ");
+                    $rehashStmt->execute([
+                        'password_hash' => $newHash,
+                        'id' => (int) $user['id'],
+                    ]);
+                }
+            }
+        } else {
+            $hashInfo = password_get_info($storedHash);
+            $isPasswordHash = ((int) ($hashInfo['algo'] ?? 0)) !== 0;
+
+            // Supports one-time migration for legacy plain-text password values.
+            if (!$isPasswordHash && hash_equals($storedHash, $password)) {
+                $newHash = password_hash($password, PASSWORD_DEFAULT);
+                if (is_string($newHash) && $newHash !== '') {
+                    $upgradeStmt = $db->prepare("
+                        UPDATE users
+                        SET password_hash = :password_hash
+                        WHERE id = :id
+                        LIMIT 1
+                    ");
+                    $upgradeStmt->execute([
+                        'password_hash' => $newHash,
+                        'id' => (int) $user['id'],
+                    ]);
+                }
+
+                $isValidLogin = true;
+            }
+        }
+    }
+
+    if (!$user || !$isValidLogin) {
         recordFailedLoginAttempt();
 
         if (isLoginRateLimited()) {

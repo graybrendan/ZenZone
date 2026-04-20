@@ -25,7 +25,7 @@ if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
 }
 
 $full_name = cleanInput($_POST['full_name'] ?? '');
-$email = cleanInput($_POST['email'] ?? '');
+$email = strtolower(cleanInput($_POST['email'] ?? ''));
 $password = $_POST['password'] ?? '';
 
 if ($full_name === '' || $email === '' || $password === '') {
@@ -51,6 +51,9 @@ try {
     }
 
     $password_hash = password_hash($password, PASSWORD_DEFAULT);
+    if (!is_string($password_hash) || $password_hash === '') {
+        throw new RuntimeException('Password hashing failed.');
+    }
 
     $insertStmt = $db->prepare("
         INSERT INTO users (full_name, email, password_hash)
@@ -71,10 +74,10 @@ try {
 
     loginUser($user);
     authRedirect('dashboard.php');
-} catch (PDOException $e) {
+} catch (Throwable $e) {
     error_log('Registration failed: ' . $e->getMessage());
 
-    if ((string) $e->getCode() === '23000') {
+    if ($e instanceof PDOException && (string) $e->getCode() === '23000') {
         failRegistration('email_exists');
     }
 
