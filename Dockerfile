@@ -2,8 +2,6 @@ FROM php:8.2-apache
 
 RUN docker-php-ext-install pdo pdo_mysql
 
-RUN rm -f /etc/apache2/mods-enabled/mpm_event.load
-
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 
 RUN sed -ri -e "s!/var/www/html!${APACHE_DOCUMENT_ROOT}!g" \
@@ -28,6 +26,9 @@ RUN sed -ri -e "s!/var/www/html!${APACHE_DOCUMENT_ROOT}!g" \
 WORKDIR /var/www/html
 COPY . /var/www/html
 
-CMD ["apache2-foreground"]
+COPY docker/apache-start.sh /usr/local/bin/apache-start
+RUN chmod +x /usr/local/bin/apache-start
+
+CMD ["/usr/local/bin/apache-start"]
 
 EXPOSE 80
