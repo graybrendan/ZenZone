@@ -2,7 +2,7 @@ FROM php:8.2-apache
 
 RUN docker-php-ext-install pdo pdo_mysql
 
-RUN rm -f /etc/apache2/mods-enabled/mpm_event.load
+RUN rm -rf /etc/apache2/mods-enabled && mkdir -p /etc/apache2/mods-enabled && ln -s ../mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 
