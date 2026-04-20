@@ -24,4 +24,10 @@ RUN sed -ri -e "s!/var/www/html!${APACHE_DOCUMENT_ROOT}!g" \
 WORKDIR /var/www/html
 COPY . /var/www/html
 
+RUN echo '#!/bin/bash' > /usr/local/bin/check-mpm.sh && \
+    echo 'echo "=== MPM modules at startup ===" && apache2ctl -M | grep mpm && echo "=== End ===" && exec apache2-foreground' >> /usr/local/bin/check-mpm.sh && \
+    chmod +x /usr/local/bin/check-mpm.sh
+
+CMD ["/usr/local/bin/check-mpm.sh"]
+
 EXPOSE 80
