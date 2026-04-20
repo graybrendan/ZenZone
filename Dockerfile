@@ -28,6 +28,6 @@ RUN echo '#!/bin/bash' > /usr/local/bin/check-mpm.sh && \
     echo 'echo "=== MPM modules at startup ===" && apache2ctl -M | grep mpm && echo "=== End ===" && exec apache2-foreground' >> /usr/local/bin/check-mpm.sh && \
     chmod +x /usr/local/bin/check-mpm.sh
 
-CMD ["/usr/local/bin/check-mpm.sh"]
+CMD ["/bin/bash", "-c", "echo '=== Checking mods-enabled ===' && ls -la /etc/apache2/mods-enabled/mpm*.load && echo '=== Trying apache2ctl -M ===' && apache2ctl -M 2>&1 | head -20 || true && echo '=== Starting apache2-foreground ===' && exec apache2-foreground"]
 
 EXPOSE 80
