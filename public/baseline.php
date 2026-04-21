@@ -2,21 +2,30 @@
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/zenscore.php';
 
 requireLogin();
 
 $db = getDB();
 
-$labels = [
-    'mindfulness' => 'Mindfulness',
-    'energy' => 'Energy',
-    'connectedness' => 'Connectedness',
-    'motivation' => 'Motivation',
-    'confidence' => 'Confidence',
-    'emotional_balance' => 'Emotional Balance',
-    'recovery' => 'Recovery',
-    'readiness' => 'Readiness',
-];
+$labels = zenzone_labels();
+$flash = getFlashMessage();
+
+$formValues = [];
+foreach (array_keys($labels) as $field) {
+    $formValues[$field] = 4;
+}
+
+if ((string) getOldInput('baseline_form', '') === 'baseline') {
+    foreach (array_keys($labels) as $field) {
+        $value = (int) getOldInput($field, '4');
+        if ($value < 1 || $value > 7) {
+            $value = 4;
+        }
+        $formValues[$field] = $value;
+    }
+    clearOldInput();
+}
 
 $stmt = $db->prepare("
     SELECT baseline_complete
@@ -53,11 +62,19 @@ if ($user && (int) $user['baseline_complete'] === 1) {
                     <p class="text-muted mb-4">Rate each area from 1 to 7.</p>
 
                     <form method="POST" action="../api/baseline/save.php">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+
+                        <?php if ($flash): ?>
+                            <div class="alert alert-<?= htmlspecialchars(($flash['type'] ?? 'info') === 'error' ? 'danger' : (string) ($flash['type'] ?? 'secondary')) ?>">
+                                <?= htmlspecialchars((string) ($flash['message'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
+                            </div>
+                        <?php endif; ?>
+
                         <?php foreach ($labels as $field => $label): ?>
                             <div class="mb-4">
                                 <label for="<?= htmlspecialchars($field) ?>" class="form-label d-flex justify-content-between">
                                     <span><?= htmlspecialchars($label) ?></span>
-                                    <span id="<?= htmlspecialchars($field) ?>_value">4</span>
+                                    <span id="<?= htmlspecialchars($field) ?>_value"><?= htmlspecialchars((string) $formValues[$field]) ?></span>
                                 </label>
                                 <input
                                     type="range"
@@ -67,7 +84,7 @@ if ($user && (int) $user['baseline_complete'] === 1) {
                                     step="1"
                                     id="<?= htmlspecialchars($field) ?>"
                                     name="<?= htmlspecialchars($field) ?>"
-                                    value="4"
+                                    value="<?= htmlspecialchars((string) $formValues[$field]) ?>"
                                     oninput="document.getElementById('<?= htmlspecialchars($field) ?>_value').textContent = this.value"
                                     required
                                 >

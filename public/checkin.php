@@ -7,13 +7,21 @@ require_once __DIR__ . '/../includes/zenscore.php';
 
 requireLogin();
 
-$pdo = getDB();
 $userId = (int) $_SESSION['user_id'];
 $today = date('Y-m-d');
 
 $labels = zenzone_labels();
 $flash = getFlashMessage();
-$todaySummary = zenzone_get_daily_summary($pdo, $userId, $today);
+$todaySummary = null;
+$loadErrorMessage = '';
+
+try {
+    $pdo = getDB();
+    $todaySummary = zenzone_get_daily_summary($pdo, $userId, $today);
+} catch (Throwable $e) {
+    error_log('Check-in page load failed: ' . $e->getMessage());
+    $loadErrorMessage = 'We could not load today\'s check-in summary. You can still submit a new check-in.';
+}
 
 $formValues = ['activity_context' => ''];
 foreach (array_keys($labels) as $field) {
@@ -96,6 +104,12 @@ function flashClass(string $type): string
             <?php if ($flash): ?>
                 <div class="alert alert-<?= h(flashClass((string) ($flash['type'] ?? ''))) ?>">
                     <?= h((string) ($flash['message'] ?? '')) ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($loadErrorMessage !== ''): ?>
+                <div class="alert alert-warning">
+                    <?= h($loadErrorMessage) ?>
                 </div>
             <?php endif; ?>
 

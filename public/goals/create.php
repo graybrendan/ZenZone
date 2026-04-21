@@ -11,6 +11,10 @@ $userId = (int) $_SESSION['user_id'];
 $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = 'Your request could not be verified. Please try again.';
+    }
+
     $title = trim($_POST['title'] ?? '');
     $categoriesInput = $_POST['categories'] ?? [];
     $cadenceNumber = isset($_POST['cadence_number']) ? (int) $_POST['cadence_number'] : 0;
@@ -32,9 +36,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         )));
     }
 
-    if ($title === '') {
+    if ($error === null && $title === '') {
         $error = 'Goal title is required.';
-    } elseif (empty($selectedCategories)) {
+    } elseif ($error === null && empty($selectedCategories)) {
         $error = 'Select at least one category.';
     } elseif (array_diff($selectedCategories, $allowedCategories)) {
         $error = 'Please choose valid categories.';
@@ -231,6 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 
     <form method="POST" action="">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
         <label for="title">Goal Title</label>
         <input
             type="text"

@@ -7,39 +7,48 @@ require_once __DIR__ . '/../includes/checkin_functions.php';
 
 requireLogin();
 
-$pdo = getDB();
-$userId = (int) $_SESSION['user_id'];
 $checkinId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
 if ($checkinId <= 0) {
-    setFlashMessage('error', 'Check-in result not found.');
-    authRedirect('checkin.php');
+    redirectWithFlash('checkin.php', 'Check-in result not found.');
 }
 
-$checkin = zenzone_get_checkin_by_id($pdo, $userId, $checkinId);
+try {
+    $pdo = getDB();
+    $userId = (int) $_SESSION['user_id'];
+    $checkin = zenzone_get_checkin_by_id($pdo, $userId, $checkinId);
+} catch (Throwable $e) {
+    error_log('Check-in result load failed: ' . $e->getMessage());
+    redirectWithFlash('checkin.php', 'Could not load this check-in result right now. Please try again.');
+}
+
 if ($checkin === null) {
-    setFlashMessage('error', 'That check-in result is unavailable.');
-    authRedirect('checkin.php');
+    redirectWithFlash('checkin.php', 'That check-in result is unavailable.');
 }
 
-$labels = zenzone_labels();
-$summaryText = zenzone_build_checkin_summary($checkin);
-$recommendationBundle = zenzone_generate_checkin_recommendations($checkin);
+try {
+    $labels = zenzone_labels();
+    $summaryText = zenzone_build_checkin_summary($checkin);
+    $recommendationBundle = zenzone_generate_checkin_recommendations($checkin);
 
-$topRecommendation = is_array($recommendationBundle['top_recommendation'] ?? null)
-    ? $recommendationBundle['top_recommendation']
-    : null;
-$alternativeRecommendations = is_array($recommendationBundle['alternatives'] ?? null)
-    ? $recommendationBundle['alternatives']
-    : [];
+    $topRecommendation = is_array($recommendationBundle['top_recommendation'] ?? null)
+        ? $recommendationBundle['top_recommendation']
+        : null;
+    $alternativeRecommendations = is_array($recommendationBundle['alternatives'] ?? null)
+        ? $recommendationBundle['alternatives']
+        : [];
 
-$dayPosition = zenzone_get_checkin_day_position($pdo, $userId, $checkin);
-$previousCheckin = zenzone_get_previous_checkin(
-    $pdo,
-    $userId,
-    (string) ($checkin['created_at'] ?? ''),
-    (int) ($checkin['id'] ?? 0)
-);
+    $dayPosition = zenzone_get_checkin_day_position($pdo, $userId, $checkin);
+    $previousCheckin = zenzone_get_previous_checkin(
+        $pdo,
+        $userId,
+        (string) ($checkin['created_at'] ?? ''),
+        (int) ($checkin['id'] ?? 0)
+    );
+} catch (Throwable $e) {
+    error_log('Check-in result compute failed: ' . $e->getMessage());
+    redirectWithFlash('checkin.php', 'Could not load recommendation details for this check-in.');
+}
 
 $deltaFromPrevious = null;
 if (is_array($previousCheckin)) {

@@ -128,6 +128,12 @@ function setFlashMessage(string $type, string $message): void
     ];
 }
 
+function redirectWithFlash(string $path, string $message, string $type = 'error', array $query = []): void
+{
+    setFlashMessage($type, $message);
+    authRedirect($path, $query);
+}
+
 function getFlashMessage(): ?array
 {
     if (!isset($_SESSION['flash_message']) || !is_array($_SESSION['flash_message'])) {

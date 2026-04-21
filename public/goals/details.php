@@ -11,7 +11,7 @@ $goalId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $today = date('Y-m-d');
 
 if ($goalId <= 0) {
-    die('Invalid goal ID.');
+    redirectWithFlash('goals/index.php', 'Invalid goal selected.');
 }
 
 $goalStmt = $db->prepare("
@@ -43,8 +43,9 @@ $goalStmt->execute([
 $goal = $goalStmt->fetch();
 
 if (!$goal) {
-    die('Goal not found.');
+    redirectWithFlash('goals/index.php', 'Goal not found.');
 }
+$flash = getFlashMessage();
 
 function getCadenceWindow(string $unit, DateTimeImmutable $today): array
 {
@@ -219,6 +220,12 @@ function safeValue($value, $fallback = 'None')
 <body>
     <h1>Goal Details</h1>
 
+    <?php if ($flash): ?>
+        <div class="card" style="border-color: <?php echo (($flash['type'] ?? '') === 'error') ? '#d6a3a3' : '#9bc29b'; ?>; background: <?php echo (($flash['type'] ?? '') === 'error') ? '#fff0f0' : '#eef9ee'; ?>;">
+            <?php echo htmlspecialchars((string) ($flash['message'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+        </div>
+    <?php endif; ?>
+
     <div class="card">
         <div class="row">
             <strong>Title:</strong>
@@ -272,24 +279,28 @@ function safeValue($value, $fallback = 'None')
 
             <?php if ($isActive): ?>
                 <form method="POST" action="../../api/goals/update.php">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
                     <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
                     <input type="hidden" name="action" value="pause">
                     <button type="submit">Pause Goal</button>
                 </form>
 
                 <form method="POST" action="../../api/goals/update.php">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
                     <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
                     <input type="hidden" name="action" value="complete">
                     <button type="submit">Mark Completed</button>
                 </form>
             <?php elseif ($isPaused): ?>
                 <form method="POST" action="../../api/goals/update.php">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
                     <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
                     <input type="hidden" name="action" value="resume">
                     <button type="submit">Resume Goal</button>
                 </form>
 
                 <form method="POST" action="../../api/goals/update.php">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
                     <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
                     <input type="hidden" name="action" value="complete">
                     <button type="submit">Mark Completed</button>
@@ -297,6 +308,7 @@ function safeValue($value, $fallback = 'None')
             <?php endif; ?>
 
             <form method="POST" action="../../api/goals/delete.php" onsubmit="return confirm('Delete this goal? This cannot be undone.');">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
                 <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
                 <button type="submit">Delete Goal</button>
             </form>
@@ -320,6 +332,7 @@ function safeValue($value, $fallback = 'None')
             <?php endif; ?>
 
             <form method="POST" action="../../api/goals/checkin.php">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
                 <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
 
                 <p>

@@ -7,6 +7,7 @@ requireLogin();
 
 $db = getDB();
 $userId = (int) $_SESSION['user_id'];
+$flash = getFlashMessage();
 $today = date('Y-m-d');
 $weekStart = date('Y-m-d', strtotime('monday this week'));
 $monthStart = date('Y-m-01');
@@ -26,39 +27,41 @@ $baselineComplete = $user ? (int) $user['baseline_complete'] : 0;
 $baselineScore = null;
 $currentDailyScore = null;
 
-if ($baselineComplete === 1) {
-    $baselineStmt = $db->prepare("
-        SELECT baseline_score
-        FROM baseline_assessments
-        WHERE user_id = :user_id
-        ORDER BY created_at DESC
-        LIMIT 1
-    ");
-    $baselineStmt->execute([
-        'user_id' => $userId
-    ]);
-    $baseline = $baselineStmt->fetch();
+if ($baselineComplete !== 1) {
+    redirectWithFlash('baseline.php', 'Complete your baseline assessment to continue.');
+}
 
-    if ($baseline) {
-        $baselineScore = $baseline['baseline_score'];
-    }
+$baselineStmt = $db->prepare("
+    SELECT baseline_score
+    FROM baseline_assessments
+    WHERE user_id = :user_id
+    ORDER BY created_at DESC
+    LIMIT 1
+");
+$baselineStmt->execute([
+    'user_id' => $userId
+]);
+$baseline = $baselineStmt->fetch();
 
-    $dailyStmt = $db->prepare("
-        SELECT daily_score
-        FROM daily_zenscore_summary
-        WHERE user_id = :user_id
-          AND summary_date = :summary_date
-        LIMIT 1
-    ");
-    $dailyStmt->execute([
-        'user_id' => $userId,
-        'summary_date' => $today
-    ]);
-    $daily = $dailyStmt->fetch();
+if ($baseline) {
+    $baselineScore = $baseline['baseline_score'];
+}
 
-    if ($daily) {
-        $currentDailyScore = $daily['daily_score'];
-    }
+$dailyStmt = $db->prepare("
+    SELECT daily_score
+    FROM daily_zenscore_summary
+    WHERE user_id = :user_id
+      AND summary_date = :summary_date
+    LIMIT 1
+");
+$dailyStmt->execute([
+    'user_id' => $userId,
+    'summary_date' => $today
+]);
+$daily = $dailyStmt->fetch();
+
+if ($daily) {
+    $currentDailyScore = $daily['daily_score'];
 }
 
 $dailyDoneStmt = $db->prepare("
@@ -182,23 +185,24 @@ $completedGoalsCount = (int) $completedGoalsStmt->fetchColumn();
 <body>
     <h1>Dashboard</h1>
 
+    <?php if ($flash): ?>
+        <div class="card" style="margin-bottom: 16px; border-color: <?php echo (($flash['type'] ?? '') === 'error') ? '#d6a3a3' : '#9bc29b'; ?>; background: <?php echo (($flash['type'] ?? '') === 'error') ? '#fff0f0' : '#eef9ee'; ?>;">
+            <?php echo htmlspecialchars((string) ($flash['message'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+        </div>
+    <?php endif; ?>
+
     <p>Welcome, <?php echo htmlspecialchars($_SESSION['user_name']); ?>.</p>
 
     <div class="section">
         <h2>ZenScore</h2>
 
         <div class="card">
-            <?php if ($baselineComplete === 1): ?>
-                <?php if ($currentDailyScore !== null): ?>
-                    <p><strong>Today's ZenScore:</strong> <?php echo htmlspecialchars($currentDailyScore); ?></p>
-                    <p><strong>Score:</strong> <?php echo htmlspecialchars($baselineScore); ?></p>
-                <?php else: ?>
-                    <p><strong>Score:</strong> <?php echo htmlspecialchars($baselineScore); ?></p>
-                    <p>No daily ZenScore summary yet for today.</p>
-                <?php endif; ?>
+            <?php if ($currentDailyScore !== null): ?>
+                <p><strong>Today's ZenScore:</strong> <?php echo htmlspecialchars($currentDailyScore); ?></p>
+                <p><strong>Score:</strong> <?php echo htmlspecialchars($baselineScore); ?></p>
             <?php else: ?>
-                <p>Baseline assessment not completed yet.</p>
-                <p><a class="button-link" href="baseline.php">Take Baseline Assessment</a></p>
+                <p><strong>Score:</strong> <?php echo htmlspecialchars($baselineScore); ?></p>
+                <p>No daily ZenScore summary yet for today.</p>
             <?php endif; ?>
         </div>
     </div>
@@ -220,7 +224,7 @@ $completedGoalsCount = (int) $completedGoalsStmt->fetchColumn();
         <div class="actions">
             <a class="button-link" href="checkin.php">Check In</a>
             <a class="button-link" href="trends.php">View Trends</a>
-            <a class="button-link" href="goals/index.php">Today’s Goals</a>
+            <a class="button-link" href="goals/index.php">Today's Goals</a>
             <a class="button-link" href="goals/create.php">Create Goal</a>
         </div>
     </div>
@@ -243,3 +247,5 @@ $completedGoalsCount = (int) $completedGoalsStmt->fetchColumn();
     </div>
 </body>
 </html>
+
+

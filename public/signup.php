@@ -34,5 +34,7 @@ $authMessage = getAuthPageMessage('signup', $_GET);
 
         <button type="submit">Create Account</button>
     </form>
+
+    <p><a href="login.php">Already have an account? Log in</a></p>
 </body>
 </html>

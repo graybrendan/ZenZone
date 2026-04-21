@@ -5,38 +5,47 @@ require_once __DIR__ . '/../../includes/db.php';
 
 requireLogin();
 
+function redirectGoalDelete(string $message, string $type = 'error'): void
+{
+    redirectWithFlash('goals/index.php', $message, $type);
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ' . BASE_URL . '/goals/index.php');
-    exit;
+    authRedirect('goals/index.php');
 }
 
 $goalId = isset($_POST['goal_id']) ? (int) $_POST['goal_id'] : 0;
 
 if ($goalId <= 0) {
-    die('Invalid goal ID.');
+    redirectGoalDelete('Invalid goal selected.');
 }
 
-$db = getDB();
-
-$goalStmt = $db->prepare("
-    SELECT id
-    FROM goals
-    WHERE id = :id
-      AND user_id = :user_id
-    LIMIT 1
-");
-$goalStmt->execute([
-    'id' => $goalId,
-    'user_id' => $_SESSION['user_id'],
-]);
-
-$goal = $goalStmt->fetch();
-
-if (!$goal) {
-    die('Goal not found.');
+if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+    redirectGoalDelete('Your request could not be verified. Please try again.');
 }
 
+$db = null;
 try {
+    $db = getDB();
+
+    $goalStmt = $db->prepare("
+        SELECT id
+        FROM goals
+        WHERE id = :id
+          AND user_id = :user_id
+        LIMIT 1
+    ");
+    $goalStmt->execute([
+        'id' => $goalId,
+        'user_id' => $_SESSION['user_id'],
+    ]);
+
+    $goal = $goalStmt->fetch();
+
+    if (!$goal) {
+        redirectGoalDelete('Goal not found.');
+    }
+
     $db->beginTransaction();
 
     $deleteCheckinsStmt = $db->prepare("
@@ -61,12 +70,12 @@ try {
 
     $db->commit();
 } catch (Throwable $e) {
-    if ($db->inTransaction()) {
+    if ($db instanceof PDO && $db->inTransaction()) {
         $db->rollBack();
     }
 
-    die('Failed to delete goal.');
+    error_log('Goal delete failed: ' . $e->getMessage());
+    redirectGoalDelete('Failed to delete goal. Please try again.');
 }
 
-header('Location: ' . BASE_URL . '/goals/index.php');
-exit;
+redirectGoalDelete('Goal deleted.', 'success');

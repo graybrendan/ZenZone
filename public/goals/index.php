@@ -7,6 +7,7 @@ requireLogin();
 
 $db = getDB();
 $userId = (int) $_SESSION['user_id'];
+$flash = getFlashMessage();
 
 $stmt = $db->prepare("
     SELECT
@@ -77,7 +78,7 @@ function formatGoalMeta(array $goal): string
     }
     $parts[] = $cadenceNumber . ' per ' . $cadenceUnit;
 
-    return !empty($parts) ? implode(' • ', $parts) : 'No details';
+    return !empty($parts) ? implode(' | ', $parts) : 'No details';
 }
 
 function formatGoalStatus(array $goal): string
@@ -85,7 +86,7 @@ function formatGoalStatus(array $goal): string
     $status = ucfirst($goal['status'] ?? 'unknown');
 
     if (!empty($goal['is_priority'])) {
-        return $status . ' • Priority';
+        return $status . ' | Priority';
     }
 
     return $status;
@@ -185,6 +186,12 @@ function formatGoalStatus(array $goal): string
         </div>
     </div>
 
+    <?php if ($flash): ?>
+        <div class="goal-card" style="border-color: <?php echo (($flash['type'] ?? '') === 'error') ? '#d6a3a3' : '#9bc29b'; ?>; background: <?php echo (($flash['type'] ?? '') === 'error') ? '#fff0f0' : '#eef9ee'; ?>;">
+            <?php echo htmlspecialchars((string) ($flash['message'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+        </div>
+    <?php endif; ?>
+
     <div class="section">
         <h2>Current Goals</h2>
 
@@ -208,7 +215,7 @@ function formatGoalStatus(array $goal): string
                     <p class="goal-dates">
                         <strong>Dates:</strong>
                         <?php echo htmlspecialchars($goal['start_date'] ?: 'No start date'); ?>
-                        —
+                        ???
                         <?php echo htmlspecialchars($goal['end_date'] ?: 'No end date'); ?>
                     </p>
 
@@ -225,24 +232,28 @@ function formatGoalStatus(array $goal): string
 
                         <?php if (($goal['status'] ?? '') === 'active'): ?>
                             <form method="POST" action="../../api/goals/update.php">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
                                 <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
                                 <input type="hidden" name="action" value="pause">
                                 <button type="submit">Pause</button>
                             </form>
 
                             <form method="POST" action="../../api/goals/update.php">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
                                 <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
                                 <input type="hidden" name="action" value="complete">
                                 <button type="submit">Complete</button>
                             </form>
                         <?php elseif (($goal['status'] ?? '') === 'paused'): ?>
                             <form method="POST" action="../../api/goals/update.php">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
                                 <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
                                 <input type="hidden" name="action" value="resume">
                                 <button type="submit">Resume</button>
                             </form>
 
                             <form method="POST" action="../../api/goals/update.php">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
                                 <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
                                 <input type="hidden" name="action" value="complete">
                                 <button type="submit">Complete</button>
@@ -279,7 +290,7 @@ function formatGoalStatus(array $goal): string
                     <p class="goal-dates">
                         <strong>Dates:</strong>
                         <?php echo htmlspecialchars($goal['start_date'] ?: 'No start date'); ?>
-                        —
+                        ???
                         <?php echo htmlspecialchars($goal['end_date'] ?: 'No end date'); ?>
                     </p>
 
@@ -294,6 +305,7 @@ function formatGoalStatus(array $goal): string
                         <a class="button-link" href="details.php?id=<?php echo (int) $goal['id']; ?>">View</a>
 
                         <form method="POST" action="../../api/goals/delete.php" onsubmit="return confirm('Delete this completed goal? This cannot be undone.');">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
                             <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
                             <button type="submit">Delete</button>
                         </form>
@@ -305,3 +317,5 @@ function formatGoalStatus(array $goal): string
 
 </body>
 </html>
+
+

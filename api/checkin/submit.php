@@ -44,11 +44,16 @@ if (strlen($rawInput['activity_context']) > 1000) {
     $rawInput['activity_context'] = substr($rawInput['activity_context'], 0, 1000);
 }
 
-$pdo = getDB();
-$userId = (int) $_SESSION['user_id'];
-
 try {
+    $pdo = getDB();
+    $userId = (int) $_SESSION['user_id'];
+
     $inserted = zenzone_insert_checkin($pdo, $userId, $scores, $rawInput['activity_context']);
+    $insertedId = (int) ($inserted['id'] ?? 0);
+    if ($insertedId <= 0) {
+        throw new RuntimeException('Check-in insert did not return a valid id.');
+    }
+
     zenzone_rebuild_daily_summary($pdo, $userId, (string) ($inserted['checkin_date'] ?? date('Y-m-d')));
 } catch (Throwable $e) {
     error_log('Check-in submit failed: ' . $e->getMessage());
@@ -56,4 +61,4 @@ try {
 }
 
 clearOldInput();
-authRedirect('checkin_result.php', ['id' => (int) ($inserted['id'] ?? 0)]);
+authRedirect('checkin_result.php', ['id' => $insertedId]);

@@ -6,9 +6,17 @@ require_once __DIR__ . '/../../includes/validation.php';
 
 requireLogin();
 
+function redirectGoalUpdate(int $goalId, string $message, string $type = 'error'): void
+{
+    if ($goalId > 0) {
+        redirectWithFlash('goals/details.php', $message, $type, ['id' => $goalId]);
+    }
+
+    redirectWithFlash('goals/index.php', $message, $type);
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ' . BASE_URL . '/goals/index.php');
-    exit;
+    authRedirect('goals/index.php');
 }
 
 $goalId = isset($_POST['goal_id']) ? (int) $_POST['goal_id'] : 0;
@@ -17,34 +25,16 @@ $action = trim($_POST['action'] ?? 'edit');
 $allowedActions = ['edit', 'complete', 'pause', 'resume'];
 
 if ($goalId <= 0) {
-    die('Invalid goal ID.');
+    redirectGoalUpdate(0, 'Invalid goal selected.');
+}
+
+if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+    redirectGoalUpdate($goalId, 'Your request could not be verified. Please try again.');
 }
 
 if (!in_array($action, $allowedActions, true)) {
-    die('Invalid goal action.');
+    redirectGoalUpdate($goalId, 'Invalid goal action.');
 }
-
-$db = getDB();
-
-$goalStmt = $db->prepare("
-    SELECT id, user_id, title, category, cadence_number, cadence_unit, cadence_type, status, is_priority, start_date, end_date, notes
-    FROM goals
-    WHERE id = :id
-      AND user_id = :user_id
-    LIMIT 1
-");
-$goalStmt->execute([
-    'id' => $goalId,
-    'user_id' => $_SESSION['user_id'],
-]);
-
-$goal = $goalStmt->fetch();
-
-if (!$goal) {
-    die('Goal not found.');
-}
-
-$redirectUrl = BASE_URL . '/goals/details.php?id=' . $goalId;
 
 function calculatePriorityForActiveGoal(PDO $db, int $userId, int $goalId, string $cadenceType): int
 {
@@ -78,8 +68,31 @@ function calculatePriorityForActiveGoal(PDO $db, int $userId, int $goalId, strin
     return ($currentPriorityCount < $priorityLimits[$cadenceType]) ? 1 : 0;
 }
 
-switch ($action) {
-    case 'edit':
+try {
+    $db = getDB();
+
+    $goalStmt = $db->prepare("
+        SELECT id, user_id, title, category, cadence_number, cadence_unit, cadence_type, status, is_priority, start_date, end_date, notes
+        FROM goals
+        WHERE id = :id
+          AND user_id = :user_id
+        LIMIT 1
+    ");
+    $goalStmt->execute([
+        'id' => $goalId,
+        'user_id' => $_SESSION['user_id'],
+    ]);
+
+    $goal = $goalStmt->fetch();
+
+    if (!$goal) {
+        redirectGoalUpdate($goalId, 'Goal not found.');
+    }
+
+    $successMessage = 'Goal updated.';
+
+    switch ($action) {
+        case 'edit':
         $title = trim($_POST['title'] ?? '');
         $categoriesInput = $_POST['categories'] ?? [];
         $cadenceNumber = isset($_POST['cadence_number']) ? (int) $_POST['cadence_number'] : 0;
@@ -92,11 +105,11 @@ switch ($action) {
         $allowedCadenceUnits = ['day', 'week', 'month'];
 
         if ($title === '') {
-            die('Goal title is required.');
+            redirectGoalUpdate($goalId, 'Goal title is required.');
         }
 
         if (!is_array($categoriesInput)) {
-            die('Invalid category selection.');
+            redirectGoalUpdate($goalId, 'Invalid category selection.');
         }
 
         $selectedCategories = array_values(array_unique(array_filter(
@@ -107,15 +120,15 @@ switch ($action) {
         )));
 
         if (empty($selectedCategories) || array_diff($selectedCategories, $allowedCategories)) {
-            die('Invalid category.');
+            redirectGoalUpdate($goalId, 'Please choose valid categories.');
         }
 
         if ($cadenceNumber <= 0) {
-            die('Cadence number must be at least 1.');
+            redirectGoalUpdate($goalId, 'Cadence number must be at least 1.');
         }
 
         if (!in_array($cadenceUnit, $allowedCadenceUnits, true)) {
-            die('Invalid cadence unit.');
+            redirectGoalUpdate($goalId, 'Please choose a valid cadence unit.');
         }
 
         if ($cadenceNumber === 1 && $cadenceUnit === 'day') {
@@ -134,15 +147,15 @@ switch ($action) {
         $notes = ($notes === '') ? null : $notes;
 
         if ($startDate !== null && !isValidDateYmd($startDate)) {
-            die('Invalid start date.');
+            redirectGoalUpdate($goalId, 'Please enter a valid start date.');
         }
 
         if ($endDate !== null && !isValidDateYmd($endDate)) {
-            die('Invalid end date.');
+            redirectGoalUpdate($goalId, 'Please enter a valid end date.');
         }
 
         if ($startDate !== null && $endDate !== null && $endDate < $startDate) {
-            die('End date cannot be before start date.');
+            redirectGoalUpdate($goalId, 'End date cannot be before start date.');
         }
 
         $isPriority = 0;
@@ -185,9 +198,10 @@ switch ($action) {
             'user_id' => $_SESSION['user_id'],
         ]);
 
-        break;
+        $successMessage = 'Goal updated.';
+            break;
 
-    case 'complete':
+        case 'complete':
         if ($goal['status'] !== 'completed') {
             $completeStmt = $db->prepare("
                 UPDATE goals
@@ -202,11 +216,12 @@ switch ($action) {
                 'user_id' => $_SESSION['user_id'],
             ]);
         }
-        break;
+        $successMessage = 'Goal marked as completed.';
+            break;
 
-    case 'pause':
+        case 'pause':
         if ($goal['status'] !== 'active') {
-            die('Only active goals can be paused.');
+            redirectGoalUpdate($goalId, 'Only active goals can be paused.');
         }
 
         $pauseStmt = $db->prepare("
@@ -222,11 +237,12 @@ switch ($action) {
             'user_id' => $_SESSION['user_id'],
         ]);
 
-        break;
+        $successMessage = 'Goal paused.';
+            break;
 
-    case 'resume':
+        case 'resume':
         if ($goal['status'] !== 'paused') {
-            die('Only paused goals can be resumed.');
+            redirectGoalUpdate($goalId, 'Only paused goals can be resumed.');
         }
 
         $resumePriority = calculatePriorityForActiveGoal(
@@ -250,8 +266,12 @@ switch ($action) {
             'user_id' => $_SESSION['user_id'],
         ]);
 
-        break;
-}
+        $successMessage = 'Goal resumed.';
+            break;
+    }
 
-header('Location: ' . $redirectUrl);
-exit;
+    redirectGoalUpdate($goalId, $successMessage, 'success');
+} catch (Throwable $e) {
+    error_log('Goal update failed: ' . $e->getMessage());
+    redirectGoalUpdate($goalId, 'Unable to update goal right now. Please try again.');
+}

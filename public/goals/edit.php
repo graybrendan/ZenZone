@@ -10,7 +10,7 @@ $db = getDB();
 $goalId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
 if ($goalId <= 0) {
-    die('Invalid goal ID.');
+    redirectWithFlash('goals/index.php', 'Invalid goal selected.');
 }
 
 $stmt = $db->prepare("
@@ -28,8 +28,9 @@ $stmt->execute([
 $goal = $stmt->fetch();
 
 if (!$goal) {
-    die('Goal not found.');
+    redirectWithFlash('goals/index.php', 'Goal not found.');
 }
+$flash = getFlashMessage();
 
 $selectedCategories = [];
 if (!empty($goal['category'])) {
@@ -96,7 +97,14 @@ if (!empty($goal['category'])) {
 <body>
     <h1>Edit Goal</h1>
 
+    <?php if ($flash): ?>
+        <p style="padding: 10px; border: 1px solid <?php echo (($flash['type'] ?? '') === 'error') ? '#d6a3a3' : '#9bc29b'; ?>; background: <?php echo (($flash['type'] ?? '') === 'error') ? '#fff0f0' : '#eef9ee'; ?>; border-radius: 6px;">
+            <?php echo htmlspecialchars((string) ($flash['message'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+        </p>
+    <?php endif; ?>
+
     <form method="POST" action="../../api/goals/update.php">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
         <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
         <input type="hidden" name="action" value="edit">
 
