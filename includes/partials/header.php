@@ -102,9 +102,8 @@ if ($zzUserName === '') {
             <path d="M9.5 21v-6h5v6"></path>
         </symbol>
         <symbol id="icon-checkin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 13c1.5-2.7 3.6-4 5.8-4 2.1 0 3.5 1.2 4.7 3.4 1.2-2 2.7-3.1 4.5-3.4"></path>
-            <path d="M3 18h18"></path>
-            <path d="M12 4v3"></path>
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="m8.5 12.5 2.5 2.5 4.5-5"></path>
         </symbol>
         <symbol id="icon-goals" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="8"></circle>
