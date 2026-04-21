@@ -359,8 +359,9 @@ function safeValue($value, $fallback = 'None')
         <?php else: ?>
             <?php if (!$isActive): ?>
                 <p class="muted">Check-ins are only available while this goal is active.</p>
-            <?php else: ?>
-                <p class="muted">You have completed your goal for today! <?php echo htmlspecialchars($cadenceUnit); ?>.</p>
+            <?php endif; ?>
+            <?php if ($remainingCheckins <= 0): ?>
+                <p class="muted">You have used all your check-ins for this goal.</p>
             <?php endif; ?>
         <?php endif; ?>
     </div>
