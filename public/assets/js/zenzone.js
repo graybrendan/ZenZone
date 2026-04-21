@@ -237,10 +237,287 @@
     fields.forEach(initFloatingField);
   }
 
+  /* ============ App shell behaviors ============ */
+  function initAppbarShadow() {
+    var appbar = document.querySelector('.zz-appbar');
+    if (!appbar) {
+      return;
+    }
+
+    var isTicking = false;
+
+    function syncAppbarState() {
+      appbar.classList.toggle('is-scrolled', window.scrollY > 4);
+      isTicking = false;
+    }
+
+    function onScroll() {
+      if (isTicking) {
+        return;
+      }
+
+      isTicking = true;
+      window.requestAnimationFrame(syncAppbarState);
+    }
+
+    syncAppbarState();
+    window.addEventListener('scroll', onScroll, { passive: true });
+  }
+
+  function closeAppbarMenu(wrap) {
+    var toggle = wrap.querySelector('[data-zz-menu-toggle]');
+    var panel = wrap.querySelector('[data-zz-menu-panel]');
+
+    if (!toggle || !panel) {
+      return;
+    }
+
+    toggle.setAttribute('aria-expanded', 'false');
+    panel.hidden = true;
+  }
+
+  function initAppbarMenu() {
+    var menuWraps = Array.prototype.slice.call(
+      document.querySelectorAll('[data-zz-menu-wrap]')
+    );
+
+    if (!menuWraps.length) {
+      return;
+    }
+
+    menuWraps.forEach(function (wrap) {
+      var toggle = wrap.querySelector('[data-zz-menu-toggle]');
+      var panel = wrap.querySelector('[data-zz-menu-panel]');
+
+      if (!toggle || !panel) {
+        return;
+      }
+
+      toggle.addEventListener('click', function () {
+        var isOpen = toggle.getAttribute('aria-expanded') === 'true';
+
+        menuWraps.forEach(function (item) {
+          if (item !== wrap) {
+            closeAppbarMenu(item);
+          }
+        });
+
+        toggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        panel.hidden = isOpen;
+      });
+    });
+
+    document.addEventListener('click', function (event) {
+      menuWraps.forEach(function (wrap) {
+        if (!wrap.contains(event.target)) {
+          closeAppbarMenu(wrap);
+        }
+      });
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') {
+        return;
+      }
+
+      menuWraps.forEach(closeAppbarMenu);
+    });
+  }
+
+  function normalizeToastVariant(rawType) {
+    var type = String(rawType || 'info').toLowerCase();
+
+    if (type === 'error') {
+      return 'danger';
+    }
+
+    if (['success', 'info', 'warning', 'danger'].indexOf(type) === -1) {
+      return 'info';
+    }
+
+    return type;
+  }
+
+  function dismissToast(toast) {
+    if (!toast || toast.classList.contains('is-dismissing')) {
+      return;
+    }
+
+    toast.classList.add('is-dismissing');
+
+    window.setTimeout(function () {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 230);
+  }
+
+  function scheduleToastDismiss(toast) {
+    if (!toast || toast.getAttribute('data-zz-auto-dismiss') === 'true') {
+      return;
+    }
+
+    toast.setAttribute('data-zz-auto-dismiss', 'true');
+
+    window.setTimeout(function () {
+      dismissToast(toast);
+    }, 4500);
+  }
+
+  function createIconUse(symbolId, svgClass) {
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', svgClass);
+    svg.setAttribute('aria-hidden', 'true');
+
+    var use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', symbolId);
+    use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', symbolId);
+
+    svg.appendChild(use);
+    return svg;
+  }
+
+  function createToastElement(rawType, message) {
+    var variant = normalizeToastVariant(rawType);
+    var toast = document.createElement('div');
+    toast.className = 'zz-toast zz-toast--' + variant;
+    toast.setAttribute('role', 'status');
+
+    var iconWrap = document.createElement('span');
+    iconWrap.className = 'zz-toast__icon';
+    iconWrap.appendChild(createIconUse('#icon-check', 'zz-toast__icon-svg'));
+
+    var text = document.createElement('p');
+    text.className = 'zz-toast__text';
+    text.textContent = String(message || '').trim();
+
+    var closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'zz-toast__close';
+    closeButton.setAttribute('aria-label', 'Dismiss');
+    closeButton.appendChild(createIconUse('#icon-close', 'zz-toast__close-icon'));
+
+    toast.appendChild(iconWrap);
+    toast.appendChild(text);
+    toast.appendChild(closeButton);
+
+    return toast;
+  }
+
+  function showToast(rawType, message) {
+    var flashRegion = document.querySelector('.zz-flash-region .zz-container');
+    var normalizedMessage = String(message || '').trim();
+
+    if (!flashRegion || normalizedMessage === '') {
+      return;
+    }
+
+    var toast = createToastElement(rawType, normalizedMessage);
+    flashRegion.appendChild(toast);
+    scheduleToastDismiss(toast);
+  }
+
+  function initFlashToasts() {
+    var toasts = document.querySelectorAll('.zz-toast');
+    toasts.forEach(scheduleToastDismiss);
+
+    document.addEventListener('click', function (event) {
+      var closeButton = event.target.closest('.zz-toast__close');
+      if (!closeButton) {
+        return;
+      }
+
+      dismissToast(closeButton.closest('.zz-toast'));
+    });
+  }
+
+  function initPreviewToastTriggers() {
+    document.addEventListener('click', function (event) {
+      var trigger = event.target.closest('[data-zz-toast-trigger]');
+      if (!trigger) {
+        return;
+      }
+
+      event.preventDefault();
+      showToast(
+        trigger.getAttribute('data-zz-toast-type') || 'info',
+        trigger.getAttribute('data-zz-toast-message') || 'Notification'
+      );
+    });
+  }
+
+  function inferNavKeyFromPathname(pathname) {
+    var path = String(pathname || '').toLowerCase();
+
+    if (path.indexOf('/checkin.php') !== -1) {
+      return 'checkin';
+    }
+
+    if (path.indexOf('/goals/') !== -1) {
+      return 'goals';
+    }
+
+    if (path.indexOf('/coach/') !== -1) {
+      return 'coach';
+    }
+
+    if (path.indexOf('/content/') !== -1) {
+      return 'lessons';
+    }
+
+    return 'home';
+  }
+
+  function applyFallbackActiveState(key, selector) {
+    var activeItem = document.querySelector(
+      selector + '[data-zz-nav-key="' + key + '"]'
+    );
+
+    if (!activeItem) {
+      return;
+    }
+
+    activeItem.classList.add('is-active');
+    activeItem.setAttribute('aria-current', 'page');
+  }
+
+  function initNavFallback() {
+    var bottomNavItems = Array.prototype.slice.call(
+      document.querySelectorAll('.zz-bottomnav__item[data-zz-nav-key]')
+    );
+    var desktopNavItems = Array.prototype.slice.call(
+      document.querySelectorAll('.zz-appbar__nav-link[data-zz-nav-key]')
+    );
+
+    if (!bottomNavItems.length && !desktopNavItems.length) {
+      return;
+    }
+
+    var hasActive = bottomNavItems.concat(desktopNavItems).some(function (item) {
+      return (
+        item.classList.contains('is-active') ||
+        item.getAttribute('aria-current') === 'page'
+      );
+    });
+
+    if (hasActive) {
+      return;
+    }
+
+    var fallbackKey = inferNavKeyFromPathname(window.location.pathname);
+    applyFallbackActiveState(fallbackKey, '.zz-bottomnav__item');
+    applyFallbackActiveState(fallbackKey, '.zz-appbar__nav-link');
+  }
+
   function initZenZone() {
     initScales();
     initChipGroups();
     initFloatingFields();
+    initAppbarShadow();
+    initAppbarMenu();
+    initFlashToasts();
+    initPreviewToastTriggers();
+    initNavFallback();
   }
 
   if (document.readyState === 'loading') {

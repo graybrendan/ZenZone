@@ -141,7 +141,6 @@ Primary responsibility:
 Likely files involved:
 - `public/coach/index.php`
 - `api/coach/submit.php`
-- `api/coach/outcome.php`
 
 ### Content / lessons
 Primary responsibility:
