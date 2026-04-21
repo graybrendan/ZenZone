@@ -106,8 +106,8 @@ function zenzone_get_previous_checkin(PDO $pdo, int $userId, string $createdAt, 
         FROM check_ins
         WHERE user_id = :user_id
           AND (
-                created_at < :created_at
-                OR (created_at = :created_at AND id < :id)
+                created_at < :created_at_before
+                OR (created_at = :created_at_equal AND id < :id)
           )
         ORDER BY created_at DESC, id DESC
         LIMIT 1
@@ -115,7 +115,8 @@ function zenzone_get_previous_checkin(PDO $pdo, int $userId, string $createdAt, 
 
     $stmt->execute([
         'user_id' => $userId,
-        'created_at' => $createdAt,
+        'created_at_before' => $createdAt,
+        'created_at_equal' => $createdAt,
         'id' => $currentId,
     ]);
 
@@ -161,14 +162,15 @@ function zenzone_get_checkin_day_position(PDO $pdo, int $userId, array $checkin)
         WHERE user_id = :user_id
           AND checkin_date = :checkin_date
           AND (
-                created_at < :created_at
-                OR (created_at = :created_at AND id < :id)
+                created_at < :created_at_before
+                OR (created_at = :created_at_equal AND id < :id)
           )
     ");
     $beforeStmt->execute([
         'user_id' => $userId,
         'checkin_date' => $checkinDate,
-        'created_at' => $createdAt,
+        'created_at_before' => $createdAt,
+        'created_at_equal' => $createdAt,
         'id' => $checkinId,
     ]);
 

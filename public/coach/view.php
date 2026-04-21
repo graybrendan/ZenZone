@@ -80,29 +80,7 @@ if ($coachResponse === null) {
     ]);
 }
 
-$outcomeStmt = $db->prepare("
-    SELECT outcome, reflection_note, created_at
-    FROM coach_outcomes
-    WHERE thread_id = :thread_id
-      AND user_id = :user_id
-    ORDER BY id DESC
-    LIMIT 1
-");
-$outcomeStmt->execute([
-    'thread_id' => $threadId,
-    'user_id' => $userId,
-]);
-$latestOutcome = $outcomeStmt->fetch();
-
 $flash = getFlashMessage();
-
-$reflectionValue = '';
-$oldInputForm = (string) getOldInput('coach_form', '');
-$oldInputThreadId = (int) getOldInput('coach_outcome_thread_id', '0');
-if ($oldInputForm === 'outcome' && $oldInputThreadId === $threadId) {
-    $reflectionValue = (string) getOldInput('reflection_note', '');
-    clearOldInput();
-}
 
 function h($value): string
 {
@@ -213,13 +191,6 @@ function formatCoachDateTime(string $value): string
             margin: 0;
         }
 
-        .outcome-row {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 8px;
-        }
-
         .crisis-box {
             border: 1px solid #d6a3a3;
             background: #fff0f0;
@@ -324,32 +295,6 @@ function formatCoachDateTime(string $value): string
                 <?php endforeach; ?>
             <?php endif; ?>
         <?php endif; ?>
-    </div>
-
-    <div class="card">
-        <h2 style="margin-top: 0;">Outcome / Reflection</h2>
-
-        <?php if ($latestOutcome): ?>
-            <p><strong>Latest outcome:</strong> <?= h(ucfirst((string) ($latestOutcome['outcome'] ?? ''))) ?></p>
-            <?php if (!empty($latestOutcome['reflection_note'])): ?>
-                <p><strong>Latest note:</strong> <?= nl2br(h((string) ($latestOutcome['reflection_note'] ?? ''))) ?></p>
-            <?php endif; ?>
-            <p class="muted"><?= h(formatCoachDateTime((string) ($latestOutcome['created_at'] ?? ''))) ?></p>
-        <?php endif; ?>
-
-        <form method="POST" action="../../api/coach/outcome.php">
-            <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
-            <input type="hidden" name="thread_id" value="<?= $threadId ?>">
-
-            <div class="outcome-row">
-                <button type="submit" name="outcome" value="better">Better</button>
-                <button type="submit" name="outcome" value="same">Same</button>
-                <button type="submit" name="outcome" value="worse">Worse</button>
-            </div>
-
-            <label for="reflection_note">Optional reflection note</label>
-            <textarea id="reflection_note" name="reflection_note" rows="3" maxlength="500"><?= h($reflectionValue) ?></textarea>
-        </form>
     </div>
 
     <div class="card">

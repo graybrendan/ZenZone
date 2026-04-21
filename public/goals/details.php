@@ -361,7 +361,7 @@ function safeValue($value, $fallback = 'None')
                 <p class="muted">Check-ins are only available while this goal is active.</p>
             <?php endif; ?>
             <?php if ($remainingCheckins <= 0): ?>
-                <p class="muted">You have used all your check-ins for this goal.</p>
+                <p class="muted">You have reached this goal's check-in limit for the current cadence window.</p>
             <?php endif; ?>
         <?php endif; ?>
     </div>
