@@ -19,6 +19,21 @@ function clampTextLength(string $value, int $maxLength): string
     return substr($value, 0, $maxLength);
 }
 
+function deriveFirstNameFromFullName(string $fullName): string
+{
+    $fullName = trim($fullName);
+    if ($fullName === '') {
+        return '';
+    }
+
+    $parts = preg_split('/\s+/u', $fullName);
+    if (!is_array($parts) || empty($parts[0])) {
+        return $fullName;
+    }
+
+    return trim((string) $parts[0]);
+}
+
 function usersTableHasFirstNameColumn(PDO $db): bool
 {
     $stmt = $db->query("
@@ -91,12 +106,7 @@ if (!isStrongEnoughPassword($password)) {
 
 try {
     $db = getDB();
-
-    if (!usersTableHasFirstNameColumn($db)) {
-        setOldInput($oldInput);
-        setFlashMessage('danger', 'Signup requires a database update before new accounts can be created.');
-        authRedirect('signup.php');
-    }
+    $hasFirstNameColumn = usersTableHasFirstNameColumn($db);
 
     $checkStmt = $db->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");
     $checkStmt->execute(['email' => $email]);
@@ -110,28 +120,43 @@ try {
         throw new RuntimeException('Password hashing failed.');
     }
 
-    $insertStmt = $db->prepare("
-        INSERT INTO users (full_name, first_name, email, password_hash)
-        VALUES (:full_name, :first_name, :email, :password_hash)
-    ");
+    if ($hasFirstNameColumn) {
+        $insertStmt = $db->prepare("
+            INSERT INTO users (full_name, first_name, email, password_hash)
+            VALUES (:full_name, :first_name, :email, :password_hash)
+        ");
 
-    $insertStmt->execute([
-        'full_name' => $full_name,
-        'first_name' => $first_name,
-        'email' => $email,
-        'password_hash' => $password_hash,
-    ]);
+        $insertStmt->execute([
+            'full_name' => $full_name,
+            'first_name' => $first_name,
+            'email' => $email,
+            'password_hash' => $password_hash,
+        ]);
+    } else {
+        $insertStmt = $db->prepare("
+            INSERT INTO users (full_name, email, password_hash)
+            VALUES (:full_name, :email, :password_hash)
+        ");
+
+        $insertStmt->execute([
+            'full_name' => $full_name,
+            'email' => $email,
+            'password_hash' => $password_hash,
+        ]);
+    }
+
+    $sessionFirstName = $hasFirstNameColumn ? $first_name : deriveFirstNameFromFullName($full_name);
 
     $user = [
         'id' => (int) $db->lastInsertId(),
-        'first_name' => $first_name,
+        'first_name' => $sessionFirstName,
         'full_name' => $full_name,
         'email' => $email,
     ];
 
     clearOldInput();
     loginUser($user);
-    $_SESSION['first_name'] = $first_name;
+    $_SESSION['first_name'] = $sessionFirstName;
     authRedirect('dashboard.php');
 } catch (Throwable $e) {
     error_log('Registration failed: ' . $e->getMessage());
