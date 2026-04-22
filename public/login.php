@@ -26,6 +26,7 @@ if ($authMessage !== '') {
 $oldEmail = trim((string) getOldInput('email', ''));
 clearOldInput();
 $hasLoginError = $errorCode !== '';
+$csrfToken = getCsrfToken();
 ?>
 <?php require_once __DIR__ . '/../includes/partials/auth_header.php'; ?>
 
@@ -33,7 +34,7 @@ $hasLoginError = $errorCode !== '';
 <p class="zz-auth__subtitle">Log in to keep your streak going.</p>
 
 <form method="post" action="<?= htmlspecialchars(BASE_URL . '/api/auth/login.php', ENT_QUOTES, 'UTF-8') ?>" data-zz-login-form data-zz-login-error="<?= $hasLoginError ? 'true' : 'false' ?>">
-    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
 
     <div class="zz-field zz-float" data-zz-float>
         <input

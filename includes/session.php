@@ -3,29 +3,31 @@ require_once __DIR__ . '/config.php';
 
 function getSessionCookiePath(): string
 {
-    $basePath = (string) BASE_URL;
+    // Use root path so session + CSRF cookies survive /ZenZone vs /zenzone URL casing.
+    return '/';
+}
 
-    if (preg_match('#^https?://#i', $basePath) === 1) {
-        $parsedPath = (string) (parse_url($basePath, PHP_URL_PATH) ?? '');
-        $basePath = $parsedPath;
+function expireLegacyCookiePathCopies(string $cookieName): void
+{
+    if ($cookieName === '') {
+        return;
     }
 
-    $basePath = trim($basePath);
-    if ($basePath === '' || $basePath === '/') {
-        return '/';
+    $currentPath = getSessionCookiePath();
+    $legacyPaths = [
+        '/ZenZone',
+        '/zenzone',
+        '/ZenZone/public',
+        '/zenzone/public',
+    ];
+
+    foreach ($legacyPaths as $legacyPath) {
+        if ($legacyPath === $currentPath) {
+            continue;
+        }
+
+        setcookie($cookieName, '', time() - 42000, $legacyPath);
     }
-
-    if (strpos($basePath, '/') !== 0) {
-        $basePath = '/' . $basePath;
-    }
-
-    $basePath = rtrim($basePath, '/');
-
-    if (str_ends_with($basePath, '/public')) {
-        $basePath = substr($basePath, 0, -7);
-    }
-
-    return $basePath === '' ? '/' : $basePath;
 }
 
 function setCsrfCookie(string $token): void
@@ -56,6 +58,8 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
 
     session_start();
+    expireLegacyCookiePathCopies(session_name());
+    expireLegacyCookiePathCopies('zz_csrf_token');
 }
 
 const LOGIN_RATE_LIMIT_MAX_ATTEMPTS = 5;
@@ -450,6 +454,7 @@ function logoutUser(): void
     clearFailedLoginAttempts();
     $_SESSION = [];
     setcookie('zz_csrf_token', '', time() - 42000, getSessionCookiePath());
+    expireLegacyCookiePathCopies('zz_csrf_token');
 
     if (ini_get('session.use_cookies')) {
         $params = session_get_cookie_params();
@@ -462,6 +467,7 @@ function logoutUser(): void
             (bool) $params['secure'],
             (bool) $params['httponly']
         );
+        expireLegacyCookiePathCopies(session_name());
     }
 
     session_destroy();

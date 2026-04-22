@@ -54,12 +54,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
     $submittedToken = (string) ($_POST['csrf_token'] ?? '');
     $sessionToken = (string) ($_SESSION['csrf_token'] ?? '');
+    $cookieToken = (string) ($_COOKIE['zz_csrf_token'] ?? '');
 
     error_log(
         'Register CSRF validation failed: sid=' . session_id() .
         ', request_uri=' . (string) ($_SERVER['REQUEST_URI'] ?? '') .
         ', submitted_len=' . strlen($submittedToken) .
-        ', session_len=' . strlen($sessionToken)
+        ', session_len=' . strlen($sessionToken) .
+        ', cookie_len=' . strlen($cookieToken)
     );
 
     authRedirect('signup.php', ['error' => 'invalid_request']);

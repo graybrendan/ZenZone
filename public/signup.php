@@ -20,6 +20,7 @@ $oldFirstName = trim((string) getOldInput('first_name', ''));
 $oldFullName = trim((string) getOldInput('full_name', ''));
 $oldEmail = trim((string) getOldInput('email', ''));
 clearOldInput();
+$csrfToken = getCsrfToken();
 ?>
 <?php require_once __DIR__ . '/../includes/partials/auth_header.php'; ?>
 
@@ -27,7 +28,7 @@ clearOldInput();
 <p class="zz-auth__subtitle">One minute now, a calmer practice later.</p>
 
 <form method="post" action="<?= htmlspecialchars(BASE_URL . '/api/auth/register.php', ENT_QUOTES, 'UTF-8') ?>">
-    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
 
     <div class="zz-field zz-float" data-zz-float>
         <input
