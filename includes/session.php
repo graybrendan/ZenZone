@@ -120,7 +120,7 @@ function getAuthPageMessage(string $page, array $queryParams): string
 
     if ($page === 'signup') {
         if ($errorCode === 'invalid_input') {
-            return 'Please enter a valid first name, full name, email, and password (6+ characters).';
+            return 'Please enter a valid first name, last name, sport, email, and password (8+ characters).';
         }
 
         if ($errorCode === 'email_exists') {
@@ -145,7 +145,8 @@ function clearAuthIdentitySession(): void
         $_SESSION['user_id'],
         $_SESSION['user_name'],
         $_SESSION['user_email'],
-        $_SESSION['first_name']
+        $_SESSION['first_name'],
+        $_SESSION['user_sport']
     );
 }
 
@@ -588,6 +589,9 @@ function loginUser(array $user): void
     $_SESSION['user_id'] = (int) ($user['id'] ?? 0);
     $_SESSION['user_name'] = (string) ($user['full_name'] ?? '');
     $_SESSION['user_email'] = (string) ($user['email'] ?? '');
+    if (isset($user['sport'])) {
+        $_SESSION['user_sport'] = trim((string) $user['sport']);
+    }
 }
 
 function logoutUser(): void

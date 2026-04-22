@@ -36,6 +36,7 @@ Typical fields:
 - id
 - first_name
 - full_name
+- sport
 - email
 - password hash
 - created_at

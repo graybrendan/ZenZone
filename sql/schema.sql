@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
     first_name VARCHAR(60) NOT NULL DEFAULT '',
+    sport VARCHAR(80) NOT NULL DEFAULT '',
     email VARCHAR(150) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     baseline_complete TINYINT(1) NOT NULL DEFAULT 0,

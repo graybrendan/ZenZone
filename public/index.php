@@ -8,7 +8,7 @@ if (!empty($_SESSION['user_id'])) {
 }
 
 $authVariant = 'landing';
-$pageTitle = 'ZenZone — Mindfulness for Athletes';
+$pageTitle = 'ZenZone - Mindfulness for Athletes';
 $pageDescription = 'ZenZone is a mindfulness and performance support app built for daily check-ins, goals, and coaching moments.';
 
 require_once __DIR__ . '/../includes/partials/auth_header.php';
@@ -56,7 +56,7 @@ require_once __DIR__ . '/../includes/partials/auth_header.php';
                 </svg>
             </span>
             <h3>A coach in your pocket.</h3>
-            <p>When something's off — pre-game nerves, a rough practice, a low stretch — get one grounded next step.</p>
+            <p>When something's off - pre-game nerves, a rough practice, a low stretch - get one grounded next step.</p>
         </article>
     </div>
 </section>

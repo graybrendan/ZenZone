@@ -17,7 +17,8 @@ if ($authMessage !== '') {
 }
 
 $oldFirstName = trim((string) getOldInput('first_name', ''));
-$oldFullName = trim((string) getOldInput('full_name', ''));
+$oldLastName = trim((string) getOldInput('last_name', ''));
+$oldSport = trim((string) getOldInput('sport', ''));
 $oldEmail = trim((string) getOldInput('email', ''));
 clearOldInput();
 $csrfToken = getGuestCsrfToken();
@@ -48,15 +49,36 @@ $csrfToken = getGuestCsrfToken();
     <div class="zz-field zz-float" data-zz-float>
         <input
             type="text"
-            id="full_name"
-            name="full_name"
+            id="last_name"
+            name="last_name"
             class="zz-float__control"
             placeholder=" "
-            autocomplete="name"
+            autocomplete="family-name"
+            maxlength="60"
             required
-            value="<?= htmlspecialchars($oldFullName, ENT_QUOTES, 'UTF-8') ?>"
+            value="<?= htmlspecialchars($oldLastName, ENT_QUOTES, 'UTF-8') ?>"
         >
-        <label class="zz-float__label" for="full_name">Full name</label>
+        <label class="zz-float__label" for="last_name">Last name</label>
+    </div>
+
+    <div class="zz-field">
+        <label class="zz-label" for="sport">Primary sport</label>
+        <select id="sport" name="sport" class="zz-select" required>
+            <option value="" <?= $oldSport === '' ? 'selected' : '' ?>>Select your sport</option>
+            <option value="Basketball" <?= $oldSport === 'Basketball' ? 'selected' : '' ?>>Basketball</option>
+            <option value="Soccer" <?= $oldSport === 'Soccer' ? 'selected' : '' ?>>Soccer</option>
+            <option value="Football" <?= $oldSport === 'Football' ? 'selected' : '' ?>>Football</option>
+            <option value="Baseball" <?= $oldSport === 'Baseball' ? 'selected' : '' ?>>Baseball</option>
+            <option value="Softball" <?= $oldSport === 'Softball' ? 'selected' : '' ?>>Softball</option>
+            <option value="Track and Field" <?= $oldSport === 'Track and Field' ? 'selected' : '' ?>>Track and Field</option>
+            <option value="Cross Country" <?= $oldSport === 'Cross Country' ? 'selected' : '' ?>>Cross Country</option>
+            <option value="Swimming" <?= $oldSport === 'Swimming' ? 'selected' : '' ?>>Swimming</option>
+            <option value="Volleyball" <?= $oldSport === 'Volleyball' ? 'selected' : '' ?>>Volleyball</option>
+            <option value="Tennis" <?= $oldSport === 'Tennis' ? 'selected' : '' ?>>Tennis</option>
+            <option value="Golf" <?= $oldSport === 'Golf' ? 'selected' : '' ?>>Golf</option>
+            <option value="Wrestling" <?= $oldSport === 'Wrestling' ? 'selected' : '' ?>>Wrestling</option>
+            <option value="Other" <?= $oldSport === 'Other' ? 'selected' : '' ?>>Other</option>
+        </select>
     </div>
 
     <div class="zz-field zz-float" data-zz-float>

@@ -9,7 +9,7 @@ function isValidEmail($email) {
 }
 
 function isStrongEnoughPassword($password) {
-    return strlen($password) >= 6;
+    return strlen($password) >= 8;
 }
 
 function isValidScaleRating($value, $min = 1, $max = 7) {

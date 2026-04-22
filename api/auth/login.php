@@ -20,6 +20,20 @@ function usersTableHasFirstNameColumn(PDO $db): bool
     return (bool) $stmt->fetchColumn();
 }
 
+function usersTableHasSportColumn(PDO $db): bool
+{
+    $stmt = $db->query("
+        SELECT 1
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'users'
+          AND COLUMN_NAME = 'sport'
+        LIMIT 1
+    ");
+
+    return (bool) $stmt->fetchColumn();
+}
+
 function deriveFirstNameFromFullName(string $fullName): string
 {
     $fullName = trim($fullName);
@@ -65,9 +79,14 @@ if ($email === '' || $password === '' || !isValidEmail($email)) {
 try {
     $db = getDB();
     $hasFirstNameColumn = usersTableHasFirstNameColumn($db);
-    $selectColumns = $hasFirstNameColumn
-        ? 'id, full_name, first_name, email, password_hash'
-        : 'id, full_name, email, password_hash';
+    $hasSportColumn = usersTableHasSportColumn($db);
+    $selectColumns = 'id, full_name, email, password_hash';
+    if ($hasFirstNameColumn) {
+        $selectColumns .= ', first_name';
+    }
+    if ($hasSportColumn) {
+        $selectColumns .= ', sport';
+    }
 
     $stmt = $db->prepare("
         SELECT {$selectColumns}
@@ -153,6 +172,7 @@ try {
     }
 
     $_SESSION['first_name'] = $firstName;
+    $_SESSION['user_sport'] = $hasSportColumn && isset($user['sport']) ? trim((string) $user['sport']) : '';
     authRedirect('dashboard.php');
 } catch (PDOException $e) {
     error_log('Login failed: ' . $e->getMessage());

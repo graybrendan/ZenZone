@@ -48,6 +48,20 @@ function usersTableHasFirstNameColumn(PDO $db): bool
     return (bool) $stmt->fetchColumn();
 }
 
+function usersTableHasSportColumn(PDO $db): bool
+{
+    $stmt = $db->query("
+        SELECT 1
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'users'
+          AND COLUMN_NAME = 'sport'
+        LIMIT 1
+    ");
+
+    return (bool) $stmt->fetchColumn();
+}
+
 function failRegistration(string $errorCode = 'invalid_input', array $oldInput = []): void
 {
     $allowed = ['invalid_input', 'email_exists', 'registration_failed'];
@@ -83,16 +97,19 @@ if (!validateGuestCsrfToken($_POST['csrf_token'] ?? '')) {
 }
 
 $first_name = clampTextLength(trim((string) ($_POST['first_name'] ?? '')), 60);
-$full_name = cleanInput($_POST['full_name'] ?? '');
+$last_name = clampTextLength(trim((string) ($_POST['last_name'] ?? '')), 60);
+$sport = clampTextLength(trim((string) ($_POST['sport'] ?? '')), 80);
+$full_name = trim($first_name . ' ' . $last_name);
 $email = strtolower(cleanInput($_POST['email'] ?? ''));
 $password = $_POST['password'] ?? '';
 $oldInput = [
     'first_name' => $first_name,
-    'full_name' => $full_name,
+    'last_name' => $last_name,
+    'sport' => $sport,
     'email' => $email,
 ];
 
-if ($first_name === '' || $full_name === '' || $email === '' || $password === '') {
+if ($first_name === '' || $last_name === '' || $sport === '' || $email === '' || $password === '') {
     failRegistration('invalid_input', $oldInput);
 }
 
@@ -107,6 +124,7 @@ if (!isStrongEnoughPassword($password)) {
 try {
     $db = getDB();
     $hasFirstNameColumn = usersTableHasFirstNameColumn($db);
+    $hasSportColumn = usersTableHasSportColumn($db);
 
     $checkStmt = $db->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");
     $checkStmt->execute(['email' => $email]);
@@ -120,7 +138,20 @@ try {
         throw new RuntimeException('Password hashing failed.');
     }
 
-    if ($hasFirstNameColumn) {
+    if ($hasFirstNameColumn && $hasSportColumn) {
+        $insertStmt = $db->prepare("
+            INSERT INTO users (full_name, first_name, sport, email, password_hash)
+            VALUES (:full_name, :first_name, :sport, :email, :password_hash)
+        ");
+
+        $insertStmt->execute([
+            'full_name' => $full_name,
+            'first_name' => $first_name,
+            'sport' => $sport,
+            'email' => $email,
+            'password_hash' => $password_hash,
+        ]);
+    } elseif ($hasFirstNameColumn) {
         $insertStmt = $db->prepare("
             INSERT INTO users (full_name, first_name, email, password_hash)
             VALUES (:full_name, :first_name, :email, :password_hash)
@@ -129,6 +160,18 @@ try {
         $insertStmt->execute([
             'full_name' => $full_name,
             'first_name' => $first_name,
+            'email' => $email,
+            'password_hash' => $password_hash,
+        ]);
+    } elseif ($hasSportColumn) {
+        $insertStmt = $db->prepare("
+            INSERT INTO users (full_name, sport, email, password_hash)
+            VALUES (:full_name, :sport, :email, :password_hash)
+        ");
+
+        $insertStmt->execute([
+            'full_name' => $full_name,
+            'sport' => $sport,
             'email' => $email,
             'password_hash' => $password_hash,
         ]);
@@ -157,6 +200,7 @@ try {
     clearOldInput();
     loginUser($user);
     $_SESSION['first_name'] = $sessionFirstName;
+    $_SESSION['user_sport'] = $sport;
     authRedirect('dashboard.php');
 } catch (Throwable $e) {
     error_log('Registration failed: ' . $e->getMessage());
