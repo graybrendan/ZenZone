@@ -432,7 +432,7 @@ fieldset.zz-scale {
   display: block;
   min-width: 0;
   margin: 0 0 1rem;
-  padding: 2.65rem 1.5rem 1.5rem;
+  padding: 1.65rem 1.5rem 1.5rem;
   border: 1px solid var(--zz-border);
   border-radius: var(--zz-radius-lg);
   background: var(--zz-surface);
@@ -444,7 +444,7 @@ fieldset.zz-scale {
   width: 100%;
   display: block;
   margin-bottom: 0.25rem;
-  padding: 0;
+  padding: 1rem 0 0;
   color: var(--zz-ink);
   font-family: var(--zz-font-display);
   font-size: var(--zz-text-xl);
@@ -560,7 +560,7 @@ fieldset.zz-scale {
 
 @media (max-width: 480px) {
   fieldset.zz-scale {
-    padding: 2.25rem 1.1rem 1.1rem;
+    padding: 1.25rem 1.1rem 1.1rem;
   }
 
   .zz-scale__track,
