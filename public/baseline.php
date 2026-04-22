@@ -61,7 +61,7 @@ if ($user && (int) $user['baseline_complete'] === 1) {
                     <h1 class="h3 mb-3">Baseline Assessment</h1>
                     <p class="text-muted mb-4">Rate each area from 1 to 7.</p>
 
-                    <form method="POST" action="../api/baseline/save.php">
+                    <form method="POST" action="<?= htmlspecialchars(BASE_URL . '/api/baseline/save.php', ENT_QUOTES, 'UTF-8') ?>">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8') ?>">
 
                         <?php if ($flash): ?>

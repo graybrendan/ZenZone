@@ -18,7 +18,19 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
-    redirectBaselineError('Your request could not be verified. Please try again.');
+    $submittedToken = (string) ($_POST['csrf_token'] ?? '');
+    $sessionToken = (string) ($_SESSION['csrf_token'] ?? '');
+    $cookieToken = (string) ($_COOKIE['zz_csrf_token'] ?? '');
+
+    error_log(
+        'Baseline CSRF validation failed: sid=' . session_id() .
+        ', request_uri=' . (string) ($_SERVER['REQUEST_URI'] ?? '') .
+        ', submitted_len=' . strlen($submittedToken) .
+        ', session_len=' . strlen($sessionToken) .
+        ', cookie_len=' . strlen($cookieToken)
+    );
+
+    redirectBaselineError('Your session expired while saving baseline. Please refresh and try again.');
 }
 
 $userId = (int) $_SESSION['user_id'];
