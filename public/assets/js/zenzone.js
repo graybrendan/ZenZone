@@ -122,6 +122,112 @@
     scales.forEach(initScale);
   }
 
+  function syncRadioScaleSelection(radios) {
+    if (!radios.length) {
+      return;
+    }
+
+    var selectedIndex = radios.findIndex(function (radio) {
+      return radio.checked;
+    });
+
+    if (selectedIndex < 0) {
+      selectedIndex = 0;
+      radios[0].checked = true;
+    }
+
+    radios.forEach(function (radio, index) {
+      var isSelected = index === selectedIndex;
+      var pill = radio.closest('.zz-scale__pill');
+
+      if (pill) {
+        pill.classList.toggle('is-selected', isSelected);
+      }
+    });
+  }
+
+  function setRadioScaleByIndex(radios, nextIndex, shouldFocus) {
+    if (!radios.length) {
+      return;
+    }
+
+    var selectedIndex = clampIndex(nextIndex, radios.length);
+    var nextRadio = radios[selectedIndex];
+
+    if (!nextRadio) {
+      return;
+    }
+
+    nextRadio.checked = true;
+    nextRadio.dispatchEvent(new Event('change', { bubbles: true }));
+
+    if (shouldFocus) {
+      nextRadio.focus();
+    }
+  }
+
+  function initRadioScale(scale) {
+    var radios = Array.prototype.slice.call(
+      scale.querySelectorAll('.zz-scale__pill input[type="radio"]')
+    );
+    var track = scale.querySelector('.zz-scale__track');
+
+    if (!radios.length) {
+      return;
+    }
+
+    if (track && !track.hasAttribute('role')) {
+      track.setAttribute('role', 'radiogroup');
+    }
+
+    syncRadioScaleSelection(radios);
+
+    radios.forEach(function (radio, index) {
+      radio.addEventListener('change', function () {
+        syncRadioScaleSelection(radios);
+      });
+
+      radio.addEventListener('keydown', function (event) {
+        if (
+          event.key !== 'ArrowRight' &&
+          event.key !== 'ArrowUp' &&
+          event.key !== 'ArrowLeft' &&
+          event.key !== 'ArrowDown' &&
+          event.key !== 'Home' &&
+          event.key !== 'End'
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+
+        if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+          setRadioScaleByIndex(radios, index + 1, true);
+          return;
+        }
+
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+          setRadioScaleByIndex(radios, index - 1, true);
+          return;
+        }
+
+        if (event.key === 'Home') {
+          setRadioScaleByIndex(radios, 0, true);
+          return;
+        }
+
+        if (event.key === 'End') {
+          setRadioScaleByIndex(radios, radios.length - 1, true);
+        }
+      });
+    });
+  }
+
+  function initRadioScales() {
+    var scales = document.querySelectorAll('.zz-scale');
+    scales.forEach(initRadioScale);
+  }
+
   function initChipGroup(group) {
     var chips = Array.prototype.slice.call(
       group.querySelectorAll('.zz-chip[data-value]')
@@ -381,7 +487,10 @@
     var variant = normalizeToastVariant(rawType);
     var toast = document.createElement('div');
     toast.className = 'zz-toast zz-toast--' + variant;
-    toast.setAttribute('role', 'status');
+    toast.setAttribute(
+      'role',
+      variant === 'warning' || variant === 'danger' ? 'alert' : 'status'
+    );
 
     var iconWrap = document.createElement('span');
     iconWrap.className = 'zz-toast__icon';
@@ -488,12 +597,15 @@
     var desktopNavItems = Array.prototype.slice.call(
       document.querySelectorAll('.zz-appbar__nav-link[data-zz-nav-key]')
     );
+    var mobileNavItems = Array.prototype.slice.call(
+      document.querySelectorAll('.zz-appbar__mobile-nav-link[data-zz-nav-key]')
+    );
 
-    if (!bottomNavItems.length && !desktopNavItems.length) {
+    if (!bottomNavItems.length && !desktopNavItems.length && !mobileNavItems.length) {
       return;
     }
 
-    var hasActive = bottomNavItems.concat(desktopNavItems).some(function (item) {
+    var hasActive = bottomNavItems.concat(desktopNavItems, mobileNavItems).some(function (item) {
       return (
         item.classList.contains('is-active') ||
         item.getAttribute('aria-current') === 'page'
@@ -507,6 +619,7 @@
     var fallbackKey = inferNavKeyFromPathname(window.location.pathname);
     applyFallbackActiveState(fallbackKey, '.zz-bottomnav__item');
     applyFallbackActiveState(fallbackKey, '.zz-appbar__nav-link');
+    applyFallbackActiveState(fallbackKey, '.zz-appbar__mobile-nav-link');
   }
 
   /* ============ Auth page behaviors ============ */
@@ -592,6 +705,7 @@
 
   function initZenZone() {
     initScales();
+    initRadioScales();
     initChipGroups();
     initFloatingFields();
     initAppbarShadow();
