@@ -65,7 +65,7 @@ function flashClass(string $type): string
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Check In</title>
+    <title>Check-in</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
@@ -73,7 +73,7 @@ function flashClass(string $type): string
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-                <h1 class="h3 mb-0">Check In</h1>
+                <h1 class="h3 mb-0">Check-in</h1>
                 <div class="d-flex gap-2">
                     <a href="dashboard.php" class="btn btn-outline-secondary">Back to Dashboard</a>
                     <a href="trends.php" class="btn btn-outline-dark">View Trends</a>

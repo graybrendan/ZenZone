@@ -464,9 +464,7 @@ fieldset.zz-scale {
 
 .zz-scale__track,
 .zz-scale[data-zz-scale] {
-  --zz-scale-columns: 7;
-  display: grid;
-  grid-template-columns: repeat(var(--zz-scale-columns), minmax(0, 1fr));
+  display: flex;
   gap: 0.3rem;
   padding: 0.3rem;
   border: 1px solid var(--zz-border-strong);
@@ -477,21 +475,23 @@ fieldset.zz-scale {
 
 .zz-scale__pill {
   position: relative;
-  display: block;
+  display: flex;
+  flex: 1 1 0;
   min-width: 0;
   cursor: pointer;
 }
 
 .zz-scale input[type='radio'] {
-  -webkit-appearance: none;
-  appearance: none;
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .zz-scale__num,
@@ -512,6 +512,14 @@ fieldset.zz-scale {
   transition: background-color var(--zz-transition), color var(--zz-transition), transform var(--zz-transition), box-shadow var(--zz-transition);
 }
 
+.zz-scale__num {
+  width: 100%;
+}
+
+.zz-scale__segment {
+  flex: 1 1 0;
+}
+
 .zz-scale__pill:hover .zz-scale__num,
 .zz-scale__segment:hover {
   background: rgba(122, 155, 118, 0.18);
@@ -524,7 +532,7 @@ fieldset.zz-scale {
   background: var(--zz-sage);
   color: var(--zz-surface);
   box-shadow: var(--zz-shadow-sm);
-  transform: translateY(-1px);
+  transform: scale(1.06);
 }
 
 .zz-scale input[type='radio']:focus-visible + .zz-scale__num {
@@ -1027,6 +1035,7 @@ html {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
   color: var(--zz-muted);
   font-size: var(--zz-text-sm);
   font-weight: 600;
@@ -1115,6 +1124,7 @@ html {
   display: flex;
   align-items: center;
   gap: var(--zz-space-2);
+  white-space: nowrap;
   color: var(--zz-ink);
   font-size: var(--zz-text-sm);
   font-weight: 600;
@@ -1391,6 +1401,7 @@ html {
   margin: 0;
   font-size: 0.6875rem;
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 .zz-bottomnav__item:hover {

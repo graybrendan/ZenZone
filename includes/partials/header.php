@@ -149,11 +149,11 @@ if ($zzUserName === '') {
                     <?php else: ?>
                         <?php if ($lockPrimaryNav): ?>
                             <span class="zz-appbar__logo" aria-label="ZenZone">
-                                <img src="<?= htmlspecialchars($appleTouchHref, ENT_QUOTES, 'UTF-8') ?>" alt="ZenZone">
+                                <img src="<?= BASE_URL ?>/assets/img/logo.png" alt="ZenZone">
                             </span>
                         <?php else: ?>
                             <a class="zz-appbar__logo" href="<?= htmlspecialchars(BASE_URL . '/dashboard.php', ENT_QUOTES, 'UTF-8') ?>">
-                                <img src="<?= htmlspecialchars($appleTouchHref, ENT_QUOTES, 'UTF-8') ?>" alt="ZenZone">
+                                <img src="<?= BASE_URL ?>/assets/img/logo.png" alt="ZenZone">
                             </a>
                             <div class="zz-appbar__menu-wrap zz-appbar__menu-wrap--nav" data-zz-menu-wrap>
                                 <button

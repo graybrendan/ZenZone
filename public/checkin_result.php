@@ -229,7 +229,7 @@ $topStartUrl = recommendationStartUrl($topRecommendation);
                 <?php endif; ?>
                 <a href="trends.php?result_id=<?= h((string) $checkin['id']) ?>" class="btn btn-outline-dark">View Trends</a>
                 <a href="dashboard.php" class="btn btn-outline-secondary">Back to Dashboard</a>
-                <a href="checkin.php" class="btn btn-outline-secondary">Check In Again</a>
+                <a href="checkin.php" class="btn btn-outline-secondary">Check-in Again</a>
             </div>
         </div>
     </div>
