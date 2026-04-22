@@ -14,6 +14,7 @@ $activeNav = isset($activeNav) && is_string($activeNav) ? trim($activeNav) : 'ho
 $showBackButton = isset($showBackButton) ? (bool) $showBackButton : false;
 $backHref = isset($backHref) && is_string($backHref) && trim($backHref) !== '' ? trim($backHref) : BASE_URL . '/dashboard.php';
 $hideBottomNav = isset($hideBottomNav) ? (bool) $hideBottomNav : false;
+$lockPrimaryNav = isset($lockPrimaryNav) ? (bool) $lockPrimaryNav : false;
 $pageDescription = isset($pageDescription) && is_string($pageDescription) && trim($pageDescription) !== ''
     ? trim($pageDescription)
     : 'ZenZone supports mindful daily check-ins, goals, and coaching guidance.';
@@ -146,16 +147,82 @@ if ($zzUserName === '') {
                             <span class="zz-appbar__back-label">Back</span>
                         </a>
                     <?php else: ?>
-                        <a class="zz-appbar__logo" href="<?= htmlspecialchars(BASE_URL . '/dashboard.php', ENT_QUOTES, 'UTF-8') ?>">
-                            <img src="<?= htmlspecialchars($appleTouchHref, ENT_QUOTES, 'UTF-8') ?>" alt="ZenZone">
-                        </a>
-                        <div class="zz-appbar__menu-wrap zz-appbar__menu-wrap--nav" data-zz-menu-wrap>
+                        <?php if ($lockPrimaryNav): ?>
+                            <span class="zz-appbar__logo" aria-label="ZenZone">
+                                <img src="<?= htmlspecialchars($appleTouchHref, ENT_QUOTES, 'UTF-8') ?>" alt="ZenZone">
+                            </span>
+                        <?php else: ?>
+                            <a class="zz-appbar__logo" href="<?= htmlspecialchars(BASE_URL . '/dashboard.php', ENT_QUOTES, 'UTF-8') ?>">
+                                <img src="<?= htmlspecialchars($appleTouchHref, ENT_QUOTES, 'UTF-8') ?>" alt="ZenZone">
+                            </a>
+                            <div class="zz-appbar__menu-wrap zz-appbar__menu-wrap--nav" data-zz-menu-wrap>
+                                <button
+                                    type="button"
+                                    class="zz-appbar__menu"
+                                    aria-label="Open navigation menu"
+                                    aria-expanded="false"
+                                    aria-controls="zz-primary-menu"
+                                    data-zz-menu-toggle
+                                >
+                                    <svg class="zz-appbar__icon zz-appbar__icon--menu" aria-hidden="true">
+                                        <use xlink:href="#icon-menu"></use>
+                                    </svg>
+                                    <svg class="zz-appbar__icon zz-appbar__icon--close" aria-hidden="true">
+                                        <use xlink:href="#icon-close"></use>
+                                    </svg>
+                                </button>
+                                <div id="zz-primary-menu" class="zz-appbar__dropdown zz-appbar__dropdown--nav" hidden data-zz-menu-panel>
+                                    <nav class="zz-appbar__mobile-nav" aria-label="Primary">
+                                        <?php foreach ($zzPrimaryNavItems as $item): ?>
+                                            <?php $isNavActive = $activeNav === $item['key']; ?>
+                                            <a
+                                                class="zz-appbar__mobile-nav-link<?= $isNavActive ? ' is-active' : '' ?>"
+                                                href="<?= htmlspecialchars($item['href'], ENT_QUOTES, 'UTF-8') ?>"
+                                                data-zz-nav-key="<?= htmlspecialchars($item['key'], ENT_QUOTES, 'UTF-8') ?>"
+                                                <?= $isNavActive ? 'aria-current="page"' : '' ?>
+                                            >
+                                                <svg class="zz-appbar__mobile-nav-icon" aria-hidden="true">
+                                                    <use xlink:href="<?= htmlspecialchars($item['icon'], ENT_QUOTES, 'UTF-8') ?>"></use>
+                                                </svg>
+                                                <span><?= htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            </a>
+                                        <?php endforeach; ?>
+                                    </nav>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
+
+                <div class="zz-appbar__zone zz-appbar__zone--center">
+                    <span class="zz-appbar__mobile-title"><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+
+                <div class="zz-appbar__zone zz-appbar__zone--right">
+                    <?php if (!$lockPrimaryNav): ?>
+                        <nav class="zz-appbar__nav" aria-label="Primary">
+                            <?php foreach ($zzPrimaryNavItems as $item): ?>
+                                <?php $isActive = $activeNav === $item['key']; ?>
+                                <a
+                                    class="zz-appbar__nav-link<?= $isActive ? ' is-active' : '' ?>"
+                                    href="<?= htmlspecialchars($item['href'], ENT_QUOTES, 'UTF-8') ?>"
+                                    data-zz-nav-key="<?= htmlspecialchars($item['key'], ENT_QUOTES, 'UTF-8') ?>"
+                                    <?= $isActive ? 'aria-current="page"' : '' ?>
+                                >
+                                    <?= htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </nav>
+                    <?php endif; ?>
+
+                    <?php if (!$lockPrimaryNav): ?>
+                        <div class="zz-appbar__menu-wrap" data-zz-menu-wrap>
                             <button
                                 type="button"
                                 class="zz-appbar__menu"
-                                aria-label="Open navigation menu"
+                                aria-label="Open account menu"
                                 aria-expanded="false"
-                                aria-controls="zz-primary-menu"
+                                aria-controls="zz-account-menu"
                                 data-zz-menu-toggle
                             >
                                 <svg class="zz-appbar__icon zz-appbar__icon--menu" aria-hidden="true">
@@ -165,72 +232,16 @@ if ($zzUserName === '') {
                                     <use xlink:href="#icon-close"></use>
                                 </svg>
                             </button>
-                            <div id="zz-primary-menu" class="zz-appbar__dropdown zz-appbar__dropdown--nav" hidden data-zz-menu-panel>
-                                <nav class="zz-appbar__mobile-nav" aria-label="Primary">
-                                    <?php foreach ($zzPrimaryNavItems as $item): ?>
-                                        <?php $isNavActive = $activeNav === $item['key']; ?>
-                                        <a
-                                            class="zz-appbar__mobile-nav-link<?= $isNavActive ? ' is-active' : '' ?>"
-                                            href="<?= htmlspecialchars($item['href'], ENT_QUOTES, 'UTF-8') ?>"
-                                            data-zz-nav-key="<?= htmlspecialchars($item['key'], ENT_QUOTES, 'UTF-8') ?>"
-                                            <?= $isNavActive ? 'aria-current="page"' : '' ?>
-                                        >
-                                            <svg class="zz-appbar__mobile-nav-icon" aria-hidden="true">
-                                                <use xlink:href="<?= htmlspecialchars($item['icon'], ENT_QUOTES, 'UTF-8') ?>"></use>
-                                            </svg>
-                                            <span><?= htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') ?></span>
-                                        </a>
-                                    <?php endforeach; ?>
-                                </nav>
+                            <div id="zz-account-menu" class="zz-appbar__dropdown" hidden data-zz-menu-panel>
+                                <p class="zz-appbar__menu-label">Signed in as</p>
+                                <p class="zz-appbar__menu-value"><?= htmlspecialchars($zzUserName, ENT_QUOTES, 'UTF-8') ?></p>
+                                <form method="post" action="<?= htmlspecialchars(BASE_URL . '/api/auth/logout.php', ENT_QUOTES, 'UTF-8') ?>">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($zzCsrfToken, ENT_QUOTES, 'UTF-8') ?>">
+                                    <button type="submit" class="zz-appbar__logout">Log out</button>
+                                </form>
                             </div>
                         </div>
                     <?php endif; ?>
-                </div>
-
-                <div class="zz-appbar__zone zz-appbar__zone--center">
-                    <span class="zz-appbar__mobile-title"><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></span>
-                </div>
-
-                <div class="zz-appbar__zone zz-appbar__zone--right">
-                    <nav class="zz-appbar__nav" aria-label="Primary">
-                        <?php foreach ($zzPrimaryNavItems as $item): ?>
-                            <?php $isActive = $activeNav === $item['key']; ?>
-                            <a
-                                class="zz-appbar__nav-link<?= $isActive ? ' is-active' : '' ?>"
-                                href="<?= htmlspecialchars($item['href'], ENT_QUOTES, 'UTF-8') ?>"
-                                data-zz-nav-key="<?= htmlspecialchars($item['key'], ENT_QUOTES, 'UTF-8') ?>"
-                                <?= $isActive ? 'aria-current="page"' : '' ?>
-                            >
-                                <?= htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') ?>
-                            </a>
-                        <?php endforeach; ?>
-                    </nav>
-
-                    <div class="zz-appbar__menu-wrap" data-zz-menu-wrap>
-                        <button
-                            type="button"
-                            class="zz-appbar__menu"
-                            aria-label="Open account menu"
-                            aria-expanded="false"
-                            aria-controls="zz-account-menu"
-                            data-zz-menu-toggle
-                        >
-                            <svg class="zz-appbar__icon zz-appbar__icon--menu" aria-hidden="true">
-                                <use xlink:href="#icon-menu"></use>
-                            </svg>
-                            <svg class="zz-appbar__icon zz-appbar__icon--close" aria-hidden="true">
-                                <use xlink:href="#icon-close"></use>
-                            </svg>
-                        </button>
-                        <div id="zz-account-menu" class="zz-appbar__dropdown" hidden data-zz-menu-panel>
-                            <p class="zz-appbar__menu-label">Signed in as</p>
-                            <p class="zz-appbar__menu-value"><?= htmlspecialchars($zzUserName, ENT_QUOTES, 'UTF-8') ?></p>
-                            <form method="post" action="<?= htmlspecialchars(BASE_URL . '/api/auth/logout.php', ENT_QUOTES, 'UTF-8') ?>">
-                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($zzCsrfToken, ENT_QUOTES, 'UTF-8') ?>">
-                                <button type="submit" class="zz-appbar__logout">Log out</button>
-                            </form>
-                        </div>
-                    </div>
                 </div>
             </div>
         </header>

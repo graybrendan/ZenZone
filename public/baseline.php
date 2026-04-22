@@ -105,7 +105,8 @@ $pageEyebrow = 'Calibration';
 $pageHelper = null;
 $activeNav = 'home';
 $showBackButton = false;
-$hideBottomNav = false;
+$hideBottomNav = true;
+$lockPrimaryNav = true;
 ?>
 <?php require_once __DIR__ . '/../includes/partials/header.php'; ?>
 
@@ -149,6 +150,16 @@ $hideBottomNav = false;
 
         <div class="zz-baseline-form__submit">
             <button type="submit" class="zz-btn zz-btn--primary zz-btn--lg zz-btn--block">Save My Baseline</button>
+            <div class="zz-baseline-form__actions">
+                <a href="<?= htmlspecialchars(BASE_URL . '/checkin.php', ENT_QUOTES, 'UTF-8') ?>" class="zz-btn zz-btn--secondary zz-btn--block">Skip for now</a>
+                <button
+                    type="submit"
+                    class="zz-btn zz-btn--ghost zz-btn--block"
+                    formaction="<?= htmlspecialchars(BASE_URL . '/api/auth/logout.php', ENT_QUOTES, 'UTF-8') ?>"
+                    formmethod="post"
+                    formnovalidate
+                >Log out</button>
+            </div>
             <p class="zz-help zz-baseline-form__disclaimer">You can retake your baseline anytime from your profile.</p>
         </div>
     </form>

@@ -1850,6 +1850,12 @@ html {
   width: 100%;
 }
 
+.zz-baseline-form__actions {
+  display: grid;
+  gap: var(--zz-space-2);
+  margin-top: var(--zz-space-2);
+}
+
 .zz-baseline-form__disclaimer {
   margin-top: 0.75rem;
   margin-bottom: 0;

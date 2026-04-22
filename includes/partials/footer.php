@@ -5,6 +5,7 @@ if (!defined('BASE_URL')) {
 
 $activeNav = isset($activeNav) && is_string($activeNav) ? trim($activeNav) : 'home';
 $hideBottomNav = isset($hideBottomNav) ? (bool) $hideBottomNav : false;
+$lockPrimaryNav = isset($lockPrimaryNav) ? (bool) $lockPrimaryNav : false;
 
 if (!isset($zzPrimaryNavItems) || !is_array($zzPrimaryNavItems) || $zzPrimaryNavItems === []) {
     $zzPrimaryNavItems = [
@@ -44,7 +45,7 @@ if (!isset($zzPrimaryNavItems) || !is_array($zzPrimaryNavItems) || $zzPrimaryNav
             </div>
         </main>
 
-        <?php if (!$hideBottomNav): ?>
+        <?php if (!$hideBottomNav && !$lockPrimaryNav): ?>
             <nav class="zz-bottomnav" aria-label="Primary">
                 <?php foreach ($zzPrimaryNavItems as $item): ?>
                     <?php $isActive = $activeNav === $item['key']; ?>
