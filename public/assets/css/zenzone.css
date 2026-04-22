@@ -1021,6 +1021,14 @@ html {
   width: auto;
 }
 
+.zz-body--lock-primary-nav .zz-appbar__logo {
+  display: inline-flex;
+}
+
+.zz-body--lock-primary-nav .zz-appbar__mobile-title {
+  display: none;
+}
+
 .zz-appbar__mobile-spacer {
   display: inline-block;
   width: 44px;

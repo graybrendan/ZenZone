@@ -69,6 +69,9 @@ $zzBodyClasses = ['zz-body'];
 if ($hideBottomNav) {
     $zzBodyClasses[] = 'zz-body--no-bottom-nav';
 }
+if ($lockPrimaryNav) {
+    $zzBodyClasses[] = 'zz-body--lock-primary-nav';
+}
 
 $zzCsrfToken = function_exists('getCsrfToken') ? getCsrfToken() : '';
 $zzUserName = isset($_SESSION['user_name']) ? trim((string) $_SESSION['user_name']) : '';
