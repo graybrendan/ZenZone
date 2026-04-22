@@ -321,14 +321,19 @@ function validateCsrfToken($submittedToken): bool
         return false;
     }
 
-    $sessionToken = $_SESSION['csrf_token'] ?? '';
-    if (!is_string($sessionToken) || $sessionToken === '') {
-        $cookieToken = (string) ($_COOKIE['zz_csrf_token'] ?? '');
-        if ($cookieToken !== '' && hash_equals($cookieToken, $submittedToken)) {
+    $cookieToken = (string) ($_COOKIE['zz_csrf_token'] ?? '');
+    if ($cookieToken !== '' && hash_equals($cookieToken, $submittedToken)) {
+        $sessionToken = $_SESSION['csrf_token'] ?? '';
+        if (!is_string($sessionToken) || $sessionToken === '' || !hash_equals($sessionToken, $submittedToken)) {
+            // Re-sync session token when cookie token proves request authenticity.
             $_SESSION['csrf_token'] = $cookieToken;
-            return true;
         }
 
+        return true;
+    }
+
+    $sessionToken = $_SESSION['csrf_token'] ?? '';
+    if (!is_string($sessionToken) || $sessionToken === '') {
         return false;
     }
 
