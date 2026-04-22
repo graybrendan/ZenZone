@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/config.php';
 
+const ZENZONE_SESSION_COOKIE_NAME = 'ZENZONESESSID_V2';
+
 function getSessionCookiePath(): string
 {
     // Use root path so session + CSRF cookies survive /ZenZone vs /zenzone URL casing.
@@ -25,7 +27,7 @@ function setCsrfCookie(string $token): void
 if (session_status() === PHP_SESSION_NONE) {
     $sessionCookiePath = getSessionCookiePath();
 
-    session_name('ZENZONESESSID');
+    session_name(ZENZONE_SESSION_COOKIE_NAME);
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => $sessionCookiePath,
