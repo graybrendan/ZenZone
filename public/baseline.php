@@ -151,7 +151,7 @@ $lockPrimaryNav = true;
         <div class="zz-baseline-form__submit">
             <button type="submit" class="zz-btn zz-btn--primary zz-btn--lg zz-btn--block">Save My Baseline</button>
             <div class="zz-baseline-form__actions">
-                <a href="<?= htmlspecialchars(BASE_URL . '/checkin.php', ENT_QUOTES, 'UTF-8') ?>" class="zz-btn zz-btn--secondary zz-btn--block">Skip for now</a>
+                <a href="<?= htmlspecialchars(BASE_URL . '/dashboard.php', ENT_QUOTES, 'UTF-8') ?>" class="zz-btn zz-btn--secondary zz-btn--block">Skip for now</a>
                 <button
                     type="submit"
                     class="zz-btn zz-btn--ghost zz-btn--block"

@@ -27,10 +27,6 @@ $baselineComplete = $user ? (int) $user['baseline_complete'] : 0;
 $baselineScore = null;
 $currentDailyScore = null;
 
-if ($baselineComplete !== 1) {
-    redirectWithFlash('baseline.php', 'Complete your baseline assessment to continue.');
-}
-
 $baselineStmt = $db->prepare("
     SELECT baseline_score
     FROM baseline_assessments
@@ -46,6 +42,8 @@ $baseline = $baselineStmt->fetch();
 if ($baseline) {
     $baselineScore = $baseline['baseline_score'];
 }
+
+$needsBaseline = $baselineComplete !== 1 || $baselineScore === null;
 
 $dailyStmt = $db->prepare("
     SELECT daily_score
@@ -197,11 +195,15 @@ $completedGoalsCount = (int) $completedGoalsStmt->fetchColumn();
         <h2>ZenScore</h2>
 
         <div class="card">
-            <?php if ($currentDailyScore !== null): ?>
-                <p><strong>Today's ZenScore:</strong> <?php echo htmlspecialchars($currentDailyScore); ?></p>
-                <p><strong>Score:</strong> <?php echo htmlspecialchars($baselineScore); ?></p>
+            <?php if ($needsBaseline): ?>
+                <p>Baseline assessment is not complete yet.</p>
+                <p>Complete your baseline to unlock baseline comparison in future check-ins.</p>
+                <a class="button-link" href="baseline.php">Complete Baseline</a>
+            <?php elseif ($currentDailyScore !== null): ?>
+                <p><strong>Today's ZenScore:</strong> <?php echo htmlspecialchars((string) $currentDailyScore, ENT_QUOTES, 'UTF-8'); ?></p>
+                <p><strong>Baseline Score:</strong> <?php echo htmlspecialchars((string) $baselineScore, ENT_QUOTES, 'UTF-8'); ?></p>
             <?php else: ?>
-                <p><strong>Score:</strong> <?php echo htmlspecialchars($baselineScore); ?></p>
+                <p><strong>Baseline Score:</strong> <?php echo htmlspecialchars((string) $baselineScore, ENT_QUOTES, 'UTF-8'); ?></p>
                 <p>No daily ZenScore summary yet for today.</p>
             <?php endif; ?>
         </div>
