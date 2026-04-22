@@ -51,6 +51,10 @@ function authRedirect(string $path, array $query = []): void
         $url .= '?' . http_build_query($query);
     }
 
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+
     header('Location: ' . $url);
     exit;
 }
