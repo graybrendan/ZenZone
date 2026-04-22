@@ -490,12 +490,15 @@ function recordFailedLoginAttempt(): void
 
 function loginUser(array $user): void
 {
-    // Prevent session fixation after successful authentication.
-    session_regenerate_id(true);
-
     $_SESSION['user_id'] = (int) ($user['id'] ?? 0);
     $_SESSION['user_name'] = (string) ($user['full_name'] ?? '');
     $_SESSION['user_email'] = (string) ($user['email'] ?? '');
+
+    /*
+     * Some browsers occasionally fail to apply Set-Cookie from auth POST->302 responses.
+     * Regenerate without deleting the previous session immediately so auth does not get dropped.
+     */
+    session_regenerate_id(false);
 }
 
 function logoutUser(): void
