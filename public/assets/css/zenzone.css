@@ -432,7 +432,7 @@ fieldset.zz-scale {
   display: block;
   min-width: 0;
   margin: 0 0 1rem;
-  padding: 1.5rem;
+  padding: 1.65rem 1.5rem 1.5rem;
   border: 1px solid var(--zz-border);
   border-radius: var(--zz-radius-lg);
   background: var(--zz-surface);
@@ -560,7 +560,7 @@ fieldset.zz-scale {
 
 @media (max-width: 480px) {
   fieldset.zz-scale {
-    padding: 1.1rem;
+    padding: 1.25rem 1.1rem 1.1rem;
   }
 
   .zz-scale__track,
