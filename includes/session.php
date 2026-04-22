@@ -27,6 +27,10 @@ function setCsrfCookie(string $token): void
 if (session_status() === PHP_SESSION_NONE) {
     $sessionCookiePath = getSessionCookiePath();
 
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.use_trans_sid', '0');
+
     session_name(ZENZONE_SESSION_COOKIE_NAME);
     session_set_cookie_params([
         'lifetime' => 0,
@@ -55,7 +59,10 @@ function authRedirect(string $path, array $query = []): void
         session_write_close();
     }
 
-    header('Location: ' . $url);
+    $requestMethod = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    $statusCode = in_array($requestMethod, ['POST', 'PUT', 'PATCH', 'DELETE'], true) ? 303 : 302;
+
+    header('Location: ' . $url, true, $statusCode);
     exit;
 }
 
@@ -497,12 +504,6 @@ function loginUser(array $user): void
     $_SESSION['user_id'] = (int) ($user['id'] ?? 0);
     $_SESSION['user_name'] = (string) ($user['full_name'] ?? '');
     $_SESSION['user_email'] = (string) ($user['email'] ?? '');
-
-    /*
-     * Some browsers occasionally fail to apply Set-Cookie from auth POST->302 responses.
-     * Regenerate without deleting the previous session immediately so auth does not get dropped.
-     */
-    session_regenerate_id(false);
 }
 
 function logoutUser(): void
