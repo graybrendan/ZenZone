@@ -1,7 +1,60 @@
 <?php
 require_once __DIR__ . '/config.php';
 
+function getSessionCookiePath(): string
+{
+    $basePath = (string) BASE_URL;
+
+    if (preg_match('#^https?://#i', $basePath) === 1) {
+        $parsedPath = (string) (parse_url($basePath, PHP_URL_PATH) ?? '');
+        $basePath = $parsedPath;
+    }
+
+    $basePath = trim($basePath);
+    if ($basePath === '' || $basePath === '/') {
+        return '/';
+    }
+
+    if (strpos($basePath, '/') !== 0) {
+        $basePath = '/' . $basePath;
+    }
+
+    $basePath = rtrim($basePath, '/');
+
+    if (str_ends_with($basePath, '/public')) {
+        $basePath = substr($basePath, 0, -7);
+    }
+
+    return $basePath === '' ? '/' : $basePath;
+}
+
+function setCsrfCookie(string $token): void
+{
+    if ($token === '') {
+        return;
+    }
+
+    setcookie('zz_csrf_token', $token, [
+        'expires' => 0,
+        'path' => getSessionCookiePath(),
+        'secure' => false,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
 if (session_status() === PHP_SESSION_NONE) {
+    $sessionCookiePath = getSessionCookiePath();
+
+    session_name('ZENZONESESSID');
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => $sessionCookiePath,
+        'secure' => false,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+
     session_start();
 }
 
@@ -178,6 +231,8 @@ function getCsrfToken(): string
         }
     }
 
+    setCsrfCookie($_SESSION['csrf_token']);
+
     return $_SESSION['csrf_token'];
 }
 
@@ -189,6 +244,12 @@ function validateCsrfToken($submittedToken): bool
 
     $sessionToken = $_SESSION['csrf_token'] ?? '';
     if (!is_string($sessionToken) || $sessionToken === '') {
+        $cookieToken = (string) ($_COOKIE['zz_csrf_token'] ?? '');
+        if ($cookieToken !== '' && hash_equals($cookieToken, $submittedToken)) {
+            $_SESSION['csrf_token'] = $cookieToken;
+            return true;
+        }
+
         return false;
     }
 
@@ -388,6 +449,7 @@ function logoutUser(): void
 {
     clearFailedLoginAttempts();
     $_SESSION = [];
+    setcookie('zz_csrf_token', '', time() - 42000, getSessionCookiePath());
 
     if (ini_get('session.use_cookies')) {
         $params = session_get_cookie_params();

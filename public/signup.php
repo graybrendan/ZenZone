@@ -26,7 +26,7 @@ clearOldInput();
 <h1>Create your account</h1>
 <p class="zz-auth__subtitle">One minute now, a calmer practice later.</p>
 
-<form method="post" action="../api/auth/register.php">
+<form method="post" action="<?= htmlspecialchars(BASE_URL . '/api/auth/register.php', ENT_QUOTES, 'UTF-8') ?>">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8') ?>">
 
     <div class="zz-field zz-float" data-zz-float>

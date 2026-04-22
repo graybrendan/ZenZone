@@ -32,7 +32,7 @@ $hasLoginError = $errorCode !== '';
 <h1>Welcome back</h1>
 <p class="zz-auth__subtitle">Log in to keep your streak going.</p>
 
-<form method="post" action="../api/auth/login.php" data-zz-login-form data-zz-login-error="<?= $hasLoginError ? 'true' : 'false' ?>">
+<form method="post" action="<?= htmlspecialchars(BASE_URL . '/api/auth/login.php', ENT_QUOTES, 'UTF-8') ?>" data-zz-login-form data-zz-login-error="<?= $hasLoginError ? 'true' : 'false' ?>">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8') ?>">
 
     <div class="zz-field zz-float" data-zz-float>
