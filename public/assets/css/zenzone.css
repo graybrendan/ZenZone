@@ -1703,3 +1703,191 @@ html {
   }
 }
 
+/* ============ Baseline page ============ */
+.zz-badge--sm {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+}
+
+.zz-intro-card {
+  border: 1px solid var(--zz-border);
+  background: linear-gradient(135deg, var(--zz-surface) 0%, var(--zz-sage-wash) 100%);
+  margin-bottom: 2rem;
+}
+
+.zz-intro-card__eyebrow {
+  color: var(--zz-sage-deep);
+  margin-bottom: 0.25rem;
+}
+
+.zz-intro-card h2 {
+  margin: 0.25rem 0 0.75rem;
+  font-family: var(--zz-font-display);
+  font-size: var(--zz-text-2xl);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.zz-intro-card p {
+  margin-bottom: 1rem;
+  color: var(--zz-ink-soft);
+  line-height: 1.65;
+}
+
+.zz-intro-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.zz-baseline-form fieldset.zz-scale {
+  display: block;
+  margin: 0 0 1rem;
+  padding: 1.5rem;
+  border: 1px solid var(--zz-border);
+  border-radius: var(--zz-radius-lg);
+  background: var(--zz-surface);
+  box-shadow: var(--zz-shadow-sm);
+}
+
+.zz-scale__legend {
+  float: none;
+  width: 100%;
+  display: block;
+  margin-bottom: 0.25rem;
+  padding: 0;
+  color: var(--zz-ink);
+  font-family: var(--zz-font-display);
+  font-size: var(--zz-text-xl);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.zz-scale__description {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  max-width: 52ch;
+  color: var(--zz-muted);
+  font-family: var(--zz-font-body);
+  font-size: var(--zz-text-sm);
+  line-height: 1.5;
+}
+
+.zz-baseline-form .zz-scale__track {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.3rem;
+  padding: 0.3rem;
+  border: 1px solid var(--zz-border-strong);
+  border-radius: var(--zz-radius-pill);
+  background: linear-gradient(180deg, var(--zz-sage-wash), #EFF3EB);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+}
+
+.zz-baseline-form .zz-scale__pill {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+
+.zz-baseline-form .zz-scale__pill input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.zz-baseline-form .zz-scale__num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  padding: 0.6rem 0;
+  border-radius: var(--zz-radius-pill);
+  color: var(--zz-ink-soft);
+  font-size: var(--zz-text-base);
+  font-weight: 600;
+  line-height: 1;
+  transition: background-color var(--zz-transition), color var(--zz-transition), transform var(--zz-transition), box-shadow var(--zz-transition);
+}
+
+.zz-baseline-form .zz-scale__pill:hover .zz-scale__num {
+  background: rgba(122, 155, 118, 0.18);
+}
+
+.zz-baseline-form .zz-scale__pill input:checked + .zz-scale__num {
+  background: var(--zz-sage);
+  color: var(--zz-surface);
+  box-shadow: var(--zz-shadow-sm);
+  transform: translateY(-1px);
+}
+
+.zz-baseline-form .zz-scale__pill input:focus-visible + .zz-scale__num {
+  outline: 2px solid var(--zz-sage-deep);
+  outline-offset: 2px;
+}
+
+.zz-baseline-form .zz-scale__endpoints {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--zz-space-3);
+  margin-top: var(--zz-space-2);
+}
+
+.zz-baseline-form .zz-scale__endpoint-word {
+  color: var(--zz-muted);
+  font-size: var(--zz-text-sm);
+  font-weight: 600;
+}
+
+.zz-baseline-form__submit {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--zz-border);
+}
+
+.zz-baseline-form__submit .zz-btn {
+  width: 100%;
+}
+
+.zz-baseline-form__disclaimer {
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .zz-baseline-form__submit .zz-btn {
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .zz-intro-card {
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+  }
+
+  .zz-baseline-form fieldset.zz-scale {
+    padding: 1.1rem;
+  }
+
+  .zz-baseline-form .zz-scale__track {
+    gap: 2px;
+    padding: 2px;
+  }
+
+  .zz-baseline-form .zz-scale__num {
+    min-height: 2.1rem;
+    padding: 0.5rem 0;
+    font-size: var(--zz-text-sm);
+  }
+}
+

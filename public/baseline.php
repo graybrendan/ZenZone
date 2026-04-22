@@ -2,30 +2,10 @@
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/db.php';
-require_once __DIR__ . '/../includes/zenscore.php';
 
 requireLogin();
 
 $db = getDB();
-
-$labels = zenzone_labels();
-$flash = getFlashMessage();
-
-$formValues = [];
-foreach (array_keys($labels) as $field) {
-    $formValues[$field] = 4;
-}
-
-if ((string) getOldInput('baseline_form', '') === 'baseline') {
-    foreach (array_keys($labels) as $field) {
-        $value = (int) getOldInput($field, '4');
-        if ($value < 1 || $value > 7) {
-            $value = 4;
-        }
-        $formValues[$field] = $value;
-    }
-    clearOldInput();
-}
 
 $stmt = $db->prepare("
     SELECT baseline_complete
@@ -43,64 +23,135 @@ if ($user && (int) $user['baseline_complete'] === 1) {
     header("Location: " . BASE_URL . "/dashboard.php");
     exit;
 }
+
+$dimensions = [
+    'mindfulness' => [
+        'label' => 'Mindfulness',
+        'helper' => 'How present and aware you feel right now?',
+        'low' => 'Scattered',
+        'high' => 'Present',
+    ],
+    'energy' => [
+        'label' => 'Energy',
+        'helper' => 'How has you physical and mental fuel tank been recently?',
+        'low' => 'Depleted',
+        'high' => 'Energized',
+    ],
+    'connectedness' => [
+        'label' => 'Connectedness',
+        'helper' => 'How close do you feel to teammates, friends, and other people around you?',
+        'low' => 'Isolated',
+        'high' => 'Connected',
+    ],
+    'motivation' => [
+        'label' => 'Motivation',
+        'helper' => 'How is your drive to pursue what matters to you?',
+        'low' => 'Flat',
+        'high' => 'Driven',
+    ],
+    'confidence' => [
+        'label' => 'Confidence',
+        'helper' => 'Your belief in yourself going into whatever comes next.',
+        'low' => 'Shaky',
+        'high' => 'Assured',
+    ],
+    'emotional_balance' => [
+        'label' => 'Emotional Balance',
+        'helper' => 'How steady or in control do you feel emotionally?',
+        'low' => 'Off-center',
+        'high' => 'Steady',
+    ],
+    'recovery' => [
+        'label' => 'Recovery',
+        'helper' => 'How recovered you feel from recent training, work, or stress.',
+        'low' => 'Worn',
+        'high' => 'Restored',
+    ],
+    'readiness' => [
+        'label' => 'Readiness',
+        'helper' => 'How prepared you feel to perform at your desired level today.',
+        'low' => 'Unprepared',
+        'high' => 'Primed',
+    ],
+];
+
+$formValues = [];
+$hasOldBaselineInput = (string) getOldInput('baseline_form', '') === 'baseline';
+
+foreach (array_keys($dimensions) as $field) {
+    $prefilledValue = 4;
+
+    if ($hasOldBaselineInput) {
+        $oldValue = filter_var(
+            getOldInput($field, ''),
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1, 'max_range' => 7]]
+        );
+
+        if ($oldValue !== false) {
+            $prefilledValue = (int) $oldValue;
+        }
+    }
+
+    $formValues[$field] = $prefilledValue;
+}
+
+if ($hasOldBaselineInput) {
+    clearOldInput();
+}
+
+$pageTitle = 'Your Baseline';
+$pageEyebrow = 'Calibration';
+$pageHelper = null;
+$activeNav = 'home';
+$showBackButton = false;
+$hideBottomNav = false;
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Baseline Assessment - ZenZone</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card">
-                <div class="card-body">
-                    <h1 class="h3 mb-3">Baseline Assessment</h1>
-                    <p class="text-muted mb-4">Rate each area from 1 to 7.</p>
+<?php require_once __DIR__ . '/../includes/partials/header.php'; ?>
 
-                    <form method="POST" action="<?= htmlspecialchars(BASE_URL . '/api/baseline/save.php', ENT_QUOTES, 'UTF-8') ?>">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8') ?>">
-
-                        <?php if ($flash): ?>
-                            <div class="alert alert-<?= htmlspecialchars(($flash['type'] ?? 'info') === 'error' ? 'danger' : (string) ($flash['type'] ?? 'secondary')) ?>">
-                                <?= htmlspecialchars((string) ($flash['message'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
-                            </div>
-                        <?php endif; ?>
-
-                        <?php foreach ($labels as $field => $label): ?>
-                            <div class="mb-4">
-                                <label for="<?= htmlspecialchars($field) ?>" class="form-label d-flex justify-content-between">
-                                    <span><?= htmlspecialchars($label) ?></span>
-                                    <span id="<?= htmlspecialchars($field) ?>_value"><?= htmlspecialchars((string) $formValues[$field]) ?></span>
-                                </label>
-                                <input
-                                    type="range"
-                                    class="form-range"
-                                    min="1"
-                                    max="7"
-                                    step="1"
-                                    id="<?= htmlspecialchars($field) ?>"
-                                    name="<?= htmlspecialchars($field) ?>"
-                                    value="<?= htmlspecialchars((string) $formValues[$field]) ?>"
-                                    oninput="document.getElementById('<?= htmlspecialchars($field) ?>_value').textContent = this.value"
-                                    required
-                                >
-                            </div>
-                        <?php endforeach; ?>
-
-                        <button type="submit" class="btn btn-dark">Save Baseline</button>
-                    </form>
-
-                    <div class="mt-3">
-                        <a href="<?= htmlspecialchars(BASE_URL) ?>/dashboard.php">Back to Dashboard</a>
-                    </div>
-                </div>
-            </div>
+<section aria-labelledby="zz-baseline-intro-title">
+    <article class="zz-card zz-intro-card">
+        <p class="zz-section-title zz-intro-card__eyebrow">WHAT IS ZENSCORE?</p>
+        <h2 id="zz-baseline-intro-title">A snapshot of how you're doing.</h2>
+        <p>Your ZenScore blends eight areas that affect how you show up - mentally, physically, and emotionally. Today's ratings become your baseline, so every future check-in compares to the version of you who's here right now. It takes about a minute.</p>
+        <div class="zz-intro-card__badges" aria-label="Baseline details">
+            <span class="zz-badge zz-badge--sage zz-badge--sm">Takes about a minute</span>
+            <span class="zz-badge zz-badge--sage zz-badge--sm">Private to you</span>
+            <span class="zz-badge zz-badge--sage zz-badge--sm">Used in every check-in</span>
         </div>
-    </div>
-</div>
-</body>
-</html>
+    </article>
+
+    <form method="post" action="<?= htmlspecialchars(BASE_URL . '/api/baseline/save.php', ENT_QUOTES, 'UTF-8') ?>" class="zz-baseline-form" novalidate>
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8') ?>">
+
+        <?php foreach ($dimensions as $field => $dim): ?>
+            <?php $prefilledValue = (int) ($formValues[$field] ?? 4); ?>
+            <fieldset class="zz-scale" data-scale-name="<?= htmlspecialchars($field, ENT_QUOTES, 'UTF-8') ?>" data-scale-min="1" data-scale-max="7">
+                <legend class="zz-label zz-scale__legend"><?= htmlspecialchars((string) ($dim['label'] ?? ''), ENT_QUOTES, 'UTF-8') ?></legend>
+                <p class="zz-help zz-scale__description"><?= htmlspecialchars((string) ($dim['helper'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>
+
+                <div class="zz-scale__track" role="radiogroup" aria-label="<?= htmlspecialchars((string) ($dim['label'] ?? ''), ENT_QUOTES, 'UTF-8') ?> rating from 1 to 7">
+                    <?php for ($i = 1; $i <= 7; $i++): ?>
+                        <?php $isSelected = $prefilledValue === $i; ?>
+                        <label class="zz-scale__pill<?= $isSelected ? ' is-selected' : '' ?>">
+                            <input type="radio" name="<?= htmlspecialchars($field, ENT_QUOTES, 'UTF-8') ?>" value="<?= htmlspecialchars((string) $i, ENT_QUOTES, 'UTF-8') ?>" <?= $isSelected ? 'checked' : '' ?>>
+                            <span class="zz-scale__num"><?= htmlspecialchars((string) $i, ENT_QUOTES, 'UTF-8') ?></span>
+                        </label>
+                    <?php endfor; ?>
+                </div>
+
+                <div class="zz-scale__endpoints">
+                    <span class="zz-scale__endpoint-word"><?= htmlspecialchars((string) ($dim['low'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
+                    <span class="zz-scale__endpoint-word"><?= htmlspecialchars((string) ($dim['high'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+            </fieldset>
+        <?php endforeach; ?>
+
+        <div class="zz-baseline-form__submit">
+            <button type="submit" class="zz-btn zz-btn--primary zz-btn--lg zz-btn--block">Save My Baseline</button>
+            <p class="zz-help zz-baseline-form__disclaimer">You can retake your baseline anytime from your profile.</p>
+        </div>
+    </form>
+</section>
+
+<?php require_once __DIR__ . '/../includes/partials/footer.php'; ?>
