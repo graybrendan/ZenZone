@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     authRedirect('signup.php');
 }
 
-if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+if (!validateGuestCsrfToken($_POST['csrf_token'] ?? '')) {
     $submittedToken = (string) ($_POST['csrf_token'] ?? '');
     $sessionToken = (string) ($_SESSION['csrf_token'] ?? '');
     $cookieToken = (string) ($_COOKIE['zz_csrf_token'] ?? '');

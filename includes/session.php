@@ -7,29 +7,6 @@ function getSessionCookiePath(): string
     return '/';
 }
 
-function expireLegacyCookiePathCopies(string $cookieName): void
-{
-    if ($cookieName === '') {
-        return;
-    }
-
-    $currentPath = getSessionCookiePath();
-    $legacyPaths = [
-        '/ZenZone',
-        '/zenzone',
-        '/ZenZone/public',
-        '/zenzone/public',
-    ];
-
-    foreach ($legacyPaths as $legacyPath) {
-        if ($legacyPath === $currentPath) {
-            continue;
-        }
-
-        setcookie($cookieName, '', time() - 42000, $legacyPath);
-    }
-}
-
 function setCsrfCookie(string $token): void
 {
     if ($token === '') {
@@ -58,8 +35,6 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
 
     session_start();
-    expireLegacyCookiePathCopies(session_name());
-    expireLegacyCookiePathCopies('zz_csrf_token');
 }
 
 const LOGIN_RATE_LIMIT_MAX_ATTEMPTS = 5;
@@ -238,6 +213,78 @@ function getCsrfToken(): string
     setCsrfCookie($_SESSION['csrf_token']);
 
     return $_SESSION['csrf_token'];
+}
+
+function getAuthCsrfSigningKey(): string
+{
+    static $signingKey = null;
+
+    if (is_string($signingKey) && $signingKey !== '') {
+        return $signingKey;
+    }
+
+    $parts = [
+        (string) APP_ENV,
+        (string) DB_HOST,
+        (string) DB_NAME,
+        (string) DB_USER,
+        (string) DB_PASS,
+        __DIR__,
+    ];
+
+    $signingKey = hash('sha256', implode('|', $parts));
+    return $signingKey;
+}
+
+function getGuestCsrfToken(): string
+{
+    $timestamp = (string) time();
+    try {
+        $nonce = bin2hex(random_bytes(16));
+    } catch (Exception $e) {
+        $nonce = hash('sha256', uniqid((string) mt_rand(), true));
+        $nonce = substr($nonce, 0, 32);
+    }
+    $payload = $timestamp . '.' . $nonce;
+    $signature = hash_hmac('sha256', $payload, getAuthCsrfSigningKey());
+
+    return $payload . '.' . $signature;
+}
+
+function validateGuestCsrfToken($submittedToken): bool
+{
+    if (!is_string($submittedToken) || $submittedToken === '') {
+        return false;
+    }
+
+    $parts = explode('.', $submittedToken);
+    if (count($parts) !== 3) {
+        return false;
+    }
+
+    [$timestampRaw, $nonce, $submittedSignature] = $parts;
+    if (!ctype_digit($timestampRaw)) {
+        return false;
+    }
+
+    $timestamp = (int) $timestampRaw;
+    $now = time();
+    if ($timestamp <= 0 || abs($now - $timestamp) > 7200) {
+        return false;
+    }
+
+    if (!preg_match('/^[a-f0-9]{32}$/', $nonce)) {
+        return false;
+    }
+
+    if (!preg_match('/^[a-f0-9]{64}$/', $submittedSignature)) {
+        return false;
+    }
+
+    $payload = $timestampRaw . '.' . $nonce;
+    $expectedSignature = hash_hmac('sha256', $payload, getAuthCsrfSigningKey());
+
+    return hash_equals($expectedSignature, $submittedSignature);
 }
 
 function validateCsrfToken($submittedToken): bool
@@ -454,7 +501,6 @@ function logoutUser(): void
     clearFailedLoginAttempts();
     $_SESSION = [];
     setcookie('zz_csrf_token', '', time() - 42000, getSessionCookiePath());
-    expireLegacyCookiePathCopies('zz_csrf_token');
 
     if (ini_get('session.use_cookies')) {
         $params = session_get_cookie_params();
@@ -467,7 +513,6 @@ function logoutUser(): void
             (bool) $params['secure'],
             (bool) $params['httponly']
         );
-        expireLegacyCookiePathCopies(session_name());
     }
 
     session_destroy();

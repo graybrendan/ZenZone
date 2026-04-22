@@ -20,7 +20,7 @@ $oldFirstName = trim((string) getOldInput('first_name', ''));
 $oldFullName = trim((string) getOldInput('full_name', ''));
 $oldEmail = trim((string) getOldInput('email', ''));
 clearOldInput();
-$csrfToken = getCsrfToken();
+$csrfToken = getGuestCsrfToken();
 ?>
 <?php require_once __DIR__ . '/../includes/partials/auth_header.php'; ?>
 
