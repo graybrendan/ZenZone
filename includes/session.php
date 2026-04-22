@@ -61,6 +61,7 @@ if (session_status() === PHP_SESSION_NONE) {
 const LOGIN_RATE_LIMIT_MAX_ATTEMPTS = 5;
 const LOGIN_RATE_LIMIT_WINDOW_SECONDS = 300;
 const LOGIN_RATE_LIMIT_LOCK_SECONDS = 600;
+const AUTH_CSRF_TTL_SECONDS = 7200;
 
 function authRedirect(string $path, array $query = []): void
 {
@@ -230,6 +231,11 @@ function requireGuest(): void
 
 function getCsrfToken(): string
 {
+    $userId = (int) ($_SESSION['user_id'] ?? 0);
+    if ($userId > 0) {
+        return getSignedAuthCsrfToken($userId);
+    }
+
     if (!isset($_SESSION['csrf_token']) || !is_string($_SESSION['csrf_token']) || $_SESSION['csrf_token'] === '') {
         try {
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -262,6 +268,60 @@ function getAuthCsrfSigningKey(): string
 
     $signingKey = hash('sha256', implode('|', $parts));
     return $signingKey;
+}
+
+function getSignedAuthCsrfToken(int $userId): string
+{
+    $timestamp = (string) time();
+    try {
+        $nonce = bin2hex(random_bytes(16));
+    } catch (Exception $e) {
+        $nonce = hash('sha256', uniqid((string) mt_rand(), true));
+        $nonce = substr($nonce, 0, 32);
+    }
+
+    $payload = $timestamp . '.' . $nonce . '.' . $userId;
+    $signature = hash_hmac('sha256', $payload, getAuthCsrfSigningKey());
+
+    return $payload . '.' . $signature;
+}
+
+function validateSignedAuthCsrfToken(string $submittedToken): bool
+{
+    $parts = explode('.', $submittedToken);
+    if (count($parts) !== 4) {
+        return false;
+    }
+
+    [$timestampRaw, $nonce, $userIdRaw, $submittedSignature] = $parts;
+    if (!ctype_digit($timestampRaw) || !ctype_digit($userIdRaw)) {
+        return false;
+    }
+
+    $timestamp = (int) $timestampRaw;
+    $now = time();
+    if ($timestamp <= 0 || abs($now - $timestamp) > AUTH_CSRF_TTL_SECONDS) {
+        return false;
+    }
+
+    if (!preg_match('/^[a-f0-9]{32}$/', $nonce)) {
+        return false;
+    }
+
+    if (!preg_match('/^[a-f0-9]{64}$/', $submittedSignature)) {
+        return false;
+    }
+
+    $sessionUserId = (int) ($_SESSION['user_id'] ?? 0);
+    $tokenUserId = (int) $userIdRaw;
+    if ($sessionUserId <= 0 || $tokenUserId <= 0 || $sessionUserId !== $tokenUserId) {
+        return false;
+    }
+
+    $payload = $timestampRaw . '.' . $nonce . '.' . $userIdRaw;
+    $expectedSignature = hash_hmac('sha256', $payload, getAuthCsrfSigningKey());
+
+    return hash_equals($expectedSignature, $submittedSignature);
 }
 
 function getGuestCsrfToken(): string
@@ -319,6 +379,10 @@ function validateCsrfToken($submittedToken): bool
 {
     if (!is_string($submittedToken) || $submittedToken === '') {
         return false;
+    }
+
+    if (validateSignedAuthCsrfToken($submittedToken)) {
+        return true;
     }
 
     $cookieToken = (string) ($_COOKIE['zz_csrf_token'] ?? '');
