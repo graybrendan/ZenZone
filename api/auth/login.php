@@ -6,6 +6,35 @@ require_once __DIR__ . '/../../includes/validation.php';
 
 requireGuest();
 
+function usersTableHasFirstNameColumn(PDO $db): bool
+{
+    $stmt = $db->query("
+        SELECT 1
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'users'
+          AND COLUMN_NAME = 'first_name'
+        LIMIT 1
+    ");
+
+    return (bool) $stmt->fetchColumn();
+}
+
+function deriveFirstNameFromFullName(string $fullName): string
+{
+    $fullName = trim($fullName);
+    if ($fullName === '') {
+        return '';
+    }
+
+    $parts = preg_split('/\s+/u', $fullName);
+    if (!is_array($parts) || empty($parts[0])) {
+        return $fullName;
+    }
+
+    return trim((string) $parts[0]);
+}
+
 function failLogin(string $errorCode = 'invalid_credentials', array $extraParams = []): void
 {
     $query = array_merge(['error' => $errorCode], $extraParams);
@@ -35,9 +64,13 @@ if ($email === '' || $password === '' || !isValidEmail($email)) {
 
 try {
     $db = getDB();
+    $hasFirstNameColumn = usersTableHasFirstNameColumn($db);
+    $selectColumns = $hasFirstNameColumn
+        ? 'id, full_name, first_name, email, password_hash'
+        : 'id, full_name, email, password_hash';
 
     $stmt = $db->prepare("
-        SELECT id, full_name, email, password_hash
+        SELECT {$selectColumns}
         FROM users
         WHERE email = :email
         LIMIT 1
@@ -110,6 +143,16 @@ try {
     clearFailedLoginAttempts();
     loginUser($user);
 
+    $firstName = '';
+    if ($hasFirstNameColumn && isset($user['first_name']) && is_string($user['first_name'])) {
+        $firstName = trim($user['first_name']);
+    }
+
+    if ($firstName === '') {
+        $firstName = deriveFirstNameFromFullName((string) ($user['full_name'] ?? ''));
+    }
+
+    $_SESSION['first_name'] = $firstName;
     authRedirect('dashboard.php');
 } catch (PDOException $e) {
     error_log('Login failed: ' . $e->getMessage());

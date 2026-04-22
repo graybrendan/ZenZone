@@ -34,12 +34,13 @@ $zzFlashVariantMap = [
     $rawType = strtolower(trim((string) ($zzFlashItem['type'] ?? 'info')));
     $variant = $zzFlashVariantMap[$rawType] ?? 'info';
     $message = trim((string) ($zzFlashItem['message'] ?? ''));
+    $role = in_array($variant, ['warning', 'danger'], true) ? 'alert' : 'status';
 
     if ($message === '') {
         continue;
     }
     ?>
-    <div class="zz-toast zz-toast--<?= htmlspecialchars($variant, ENT_QUOTES, 'UTF-8') ?>" role="status">
+    <div class="zz-toast zz-toast--<?= htmlspecialchars($variant, ENT_QUOTES, 'UTF-8') ?>" role="<?= htmlspecialchars($role, ENT_QUOTES, 'UTF-8') ?>">
         <span class="zz-toast__icon" aria-hidden="true">
             <svg class="zz-toast__icon-svg">
                 <use xlink:href="#icon-check"></use>

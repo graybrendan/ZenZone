@@ -509,6 +509,87 @@
     applyFallbackActiveState(fallbackKey, '.zz-appbar__nav-link');
   }
 
+  /* ============ Auth page behaviors ============ */
+  function initAuthPasswordFields() {
+    var passwordFields = document.querySelectorAll('.zz-password-field');
+    if (!passwordFields.length) {
+      return;
+    }
+
+    passwordFields.forEach(function (field) {
+      var input = field.querySelector('input');
+      var toggleButton = field.querySelector('[data-zz-password-toggle]');
+
+      if (!input || !toggleButton) {
+        return;
+      }
+
+      var currentType = String(input.getAttribute('type') || '').toLowerCase();
+      if (currentType !== 'password' && currentType !== 'text') {
+        return;
+      }
+
+      var isVisible = currentType === 'text';
+
+      function syncToggleState() {
+        input.setAttribute('type', isVisible ? 'text' : 'password');
+        toggleButton.setAttribute('aria-pressed', isVisible ? 'true' : 'false');
+        toggleButton.setAttribute('aria-label', isVisible ? 'Hide password' : 'Show password');
+      }
+
+      toggleButton.addEventListener('click', function (event) {
+        event.preventDefault();
+        isVisible = !isVisible;
+        syncToggleState();
+      });
+
+      syncToggleState();
+    });
+  }
+
+  function initAuthLoginEmailMemory() {
+    var loginForm = document.querySelector('[data-zz-login-form]');
+    var emailInput = document.querySelector('[data-zz-login-email]');
+
+    if (!loginForm || !emailInput) {
+      return;
+    }
+
+    var storageKey = 'zz_login_email';
+    var hasLoginError = loginForm.getAttribute('data-zz-login-error') === 'true';
+    var storage = null;
+
+    try {
+      storage = window.sessionStorage;
+    } catch (error) {
+      storage = null;
+    }
+
+    if (!storage) {
+      return;
+    }
+
+    if (!hasLoginError) {
+      storage.removeItem(storageKey);
+    } else if (emailInput.value.trim() === '') {
+      var storedEmail = String(storage.getItem(storageKey) || '').trim();
+      if (storedEmail !== '') {
+        emailInput.value = storedEmail;
+        emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+
+    loginForm.addEventListener('submit', function () {
+      var emailValue = emailInput.value.trim();
+      if (emailValue === '') {
+        storage.removeItem(storageKey);
+        return;
+      }
+
+      storage.setItem(storageKey, emailValue);
+    });
+  }
+
   function initZenZone() {
     initScales();
     initChipGroups();
@@ -518,6 +599,8 @@
     initFlashToasts();
     initPreviewToastTriggers();
     initNavFallback();
+    initAuthPasswordFields();
+    initAuthLoginEmailMemory();
   }
 
   if (document.readyState === 'loading') {

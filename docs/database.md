@@ -34,6 +34,8 @@ Purpose:
 
 Typical fields:
 - id
+- first_name
+- full_name
 - email
 - password hash
 - created_at
