@@ -83,6 +83,37 @@ function normalizeBaseUrl(string $baseUrl): string
     return $baseUrl;
 }
 
+function getRequestHost(): string
+{
+    $host = strtolower(trim((string) ($_SERVER['HTTP_HOST'] ?? '')));
+    if ($host === '') {
+        return '';
+    }
+
+    // Strip :port for local-host checks.
+    return preg_replace('/:\d+$/', '', $host) ?? $host;
+}
+
+function isLocalRequestHost(): bool
+{
+    $host = getRequestHost();
+    return in_array($host, ['localhost', '127.0.0.1', '::1'], true);
+}
+
+function detectPublicBaseUrlFromScript(): string
+{
+    $scriptName = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    if ($scriptName === '') {
+        return '';
+    }
+
+    if (preg_match('#^(.*/public)(?:/.*)?$#i', $scriptName, $matches) === 1) {
+        return normalizeBaseUrl((string) ($matches[1] ?? ''));
+    }
+
+    return '';
+}
+
 $appEnv = strtolower(getEnvOrDefault('APP_ENV', 'local'));
 if ($appEnv === '') {
     $appEnv = 'local';
@@ -101,7 +132,13 @@ if ($dbPort < 1 || $dbPort > 65535) {
     $dbPort = 3306;
 }
 
-$defaultBaseUrl = $appEnv === 'production' ? '' : '/ZenZone/public';
+$detectedBaseUrl = detectPublicBaseUrlFromScript();
+if ($detectedBaseUrl !== '') {
+    $defaultBaseUrl = $detectedBaseUrl;
+} else {
+    $defaultBaseUrl = isLocalRequestHost() ? '/ZenZone/public' : '';
+}
+
 $baseUrl = normalizeBaseUrl(getEnvOrDefault('BASE_URL', $defaultBaseUrl));
 
 define('APP_ENV', $appEnv);

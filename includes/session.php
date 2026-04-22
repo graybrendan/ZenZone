@@ -9,6 +9,21 @@ function getSessionCookiePath(): string
     return '/';
 }
 
+function isHttpsRequest(): bool
+{
+    $https = strtolower((string) ($_SERVER['HTTPS'] ?? ''));
+    if ($https === 'on' || $https === '1') {
+        return true;
+    }
+
+    if ((string) ($_SERVER['SERVER_PORT'] ?? '') === '443') {
+        return true;
+    }
+
+    $forwardedProto = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+    return $forwardedProto === 'https';
+}
+
 function setCsrfCookie(string $token): void
 {
     if ($token === '') {
@@ -18,7 +33,7 @@ function setCsrfCookie(string $token): void
     setcookie('zz_csrf_token', $token, [
         'expires' => 0,
         'path' => getSessionCookiePath(),
-        'secure' => false,
+        'secure' => isHttpsRequest(),
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
@@ -35,7 +50,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => $sessionCookiePath,
-        'secure' => false,
+        'secure' => isHttpsRequest(),
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
