@@ -114,6 +114,51 @@ function detectPublicBaseUrlFromScript(): string
     return '';
 }
 
+function isHttpsRequest(): bool
+{
+    $https = strtolower((string) ($_SERVER['HTTPS'] ?? ''));
+    if ($https === 'on' || $https === '1') {
+        return true;
+    }
+
+    $requestScheme = strtolower((string) ($_SERVER['REQUEST_SCHEME'] ?? ''));
+    if ($requestScheme === 'https') {
+        return true;
+    }
+
+    $serverPort = (string) ($_SERVER['SERVER_PORT'] ?? '');
+    if ($serverPort === '443') {
+        return true;
+    }
+
+    $forwardedProto = (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '');
+    if ($forwardedProto !== '') {
+        $firstProto = strtolower(trim((string) explode(',', $forwardedProto)[0]));
+        if ($firstProto === 'https') {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function enforceHttpsBaseUrlWhenNeeded(string $baseUrl): string
+{
+    if ($baseUrl === '') {
+        return $baseUrl;
+    }
+
+    if (preg_match('#^http://#i', $baseUrl) !== 1) {
+        return $baseUrl;
+    }
+
+    if (!isHttpsRequest()) {
+        return $baseUrl;
+    }
+
+    return 'https://' . substr($baseUrl, 7);
+}
+
 $appEnv = strtolower(getEnvOrDefault('APP_ENV', 'local'));
 if ($appEnv === '') {
     $appEnv = 'local';
@@ -140,6 +185,7 @@ if ($detectedBaseUrl !== '') {
 }
 
 $baseUrl = normalizeBaseUrl(getEnvOrDefault('BASE_URL', $defaultBaseUrl));
+$baseUrl = enforceHttpsBaseUrlWhenNeeded($baseUrl);
 
 define('APP_ENV', $appEnv);
 define('DB_HOST', $dbHost);
