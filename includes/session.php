@@ -27,6 +27,10 @@ function getAuthPageMessage(string $page, array $queryParams): string
     $statusCode = (string) ($queryParams['status'] ?? '');
 
     if ($page === 'login') {
+        if ($errorCode === 'invalid_session') {
+            return 'Your session is no longer valid. Please log in again.';
+        }
+
         if ($errorCode === 'invalid_credentials') {
             return 'Invalid email or password.';
         }
@@ -74,14 +78,85 @@ function getAuthPageMessage(string $page, array $queryParams): string
     return '';
 }
 
+function clearAuthIdentitySession(): void
+{
+    unset(
+        $_SESSION['user_id'],
+        $_SESSION['user_name'],
+        $_SESSION['user_email'],
+        $_SESSION['first_name']
+    );
+}
+
 function isLoggedIn(): bool
 {
-    return !empty($_SESSION['user_id']);
+    static $authChecked = false;
+    static $authIsValid = false;
+
+    if ($authChecked) {
+        return $authIsValid;
+    }
+
+    $authChecked = true;
+
+    $userId = (int) ($_SESSION['user_id'] ?? 0);
+    if ($userId <= 0) {
+        $authIsValid = false;
+        return false;
+    }
+
+    if (!function_exists('getDB')) {
+        require_once __DIR__ . '/db.php';
+    }
+
+    try {
+        $db = getDB();
+        $stmt = $db->prepare("
+            SELECT id, full_name, email
+            FROM users
+            WHERE id = :user_id
+            LIMIT 1
+        ");
+        $stmt->execute(['user_id' => $userId]);
+        $user = $stmt->fetch();
+    } catch (Throwable $e) {
+        error_log('Session user lookup failed: ' . $e->getMessage());
+        $authIsValid = false;
+        return false;
+    }
+
+    if (!$user) {
+        clearAuthIdentitySession();
+        $_SESSION['auth_invalid_session'] = 1;
+        $authIsValid = false;
+        return false;
+    }
+
+    $_SESSION['user_id'] = (int) ($user['id'] ?? 0);
+    $_SESSION['user_name'] = (string) ($user['full_name'] ?? '');
+    $_SESSION['user_email'] = (string) ($user['email'] ?? '');
+    unset($_SESSION['auth_invalid_session']);
+
+    if (!isset($_SESSION['first_name']) || trim((string) $_SESSION['first_name']) === '') {
+        $fullName = trim((string) ($user['full_name'] ?? ''));
+        $parts = preg_split('/\s+/u', $fullName);
+        $_SESSION['first_name'] = is_array($parts) && isset($parts[0]) ? trim((string) $parts[0]) : '';
+    }
+
+    $authIsValid = true;
+    return true;
 }
 
 function requireLogin(): void
 {
     if (!isLoggedIn()) {
+        $invalidSession = !empty($_SESSION['auth_invalid_session']);
+        unset($_SESSION['auth_invalid_session']);
+
+        if ($invalidSession) {
+            authRedirect('login.php', ['error' => 'invalid_session']);
+        }
+
         authRedirect('login.php');
     }
 }
