@@ -3098,18 +3098,6 @@ html {
   min-height: 44px;
 }
 
-.zz-coach-charcount {
-  margin-top: 0.25rem;
-}
-
-.zz-coach-charcount.is-near-limit {
-  color: var(--zz-warning);
-}
-
-.zz-coach-charcount.is-limit {
-  color: var(--zz-danger);
-}
-
 .zz-coach-empty {
   text-align: center;
   padding: 2.5rem 1.25rem;

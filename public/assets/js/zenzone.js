@@ -1030,50 +1030,6 @@
     });
   }
 
-  function initCoachCharCounter() {
-    var sources = document.querySelectorAll('[data-coach-char-source]');
-    if (!sources.length) {
-      return;
-    }
-
-    sources.forEach(function (source) {
-      var key = String(source.getAttribute('data-coach-char-source') || '').trim();
-      if (key === '') {
-        return;
-      }
-
-      var target = document.querySelector('[data-coach-char-target="' + key + '"]');
-      if (!target) {
-        return;
-      }
-
-      var maxLength = readInt(source.getAttribute('maxlength'), 0);
-      if (maxLength <= 0) {
-        maxLength = readInt(source.getAttribute('data-maxlength'), 0);
-      }
-
-      function syncCharCounter() {
-        var currentLength = String(source.value || '').length;
-        if (maxLength > 0) {
-          target.textContent = currentLength + ' / ' + maxLength + ' characters';
-        } else {
-          target.textContent = currentLength + ' characters';
-        }
-
-        var nearThreshold = maxLength > 0 ? Math.floor(maxLength * 0.85) : 0;
-        target.classList.toggle(
-          'is-near-limit',
-          maxLength > 0 && currentLength >= nearThreshold && currentLength < maxLength
-        );
-        target.classList.toggle('is-limit', maxLength > 0 && currentLength >= maxLength);
-      }
-
-      source.addEventListener('input', syncCharCounter);
-      source.addEventListener('change', syncCharCounter);
-      syncCharCounter();
-    });
-  }
-
   function initZenZone() {
     initScales();
     initRadioScales();
@@ -1091,7 +1047,6 @@
     initGoalPriorityAvailability();
     initGoalDeleteConfirm();
     initCoachDeleteConfirm();
-    initCoachCharCounter();
   }
 
   if (document.readyState === 'loading') {

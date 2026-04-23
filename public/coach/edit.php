@@ -115,7 +115,7 @@ function coachTypeLabel(string $type): string
     </article>
 
     <article class="zz-card zz-coach-start">
-        <form method="POST" action="../../api/coach/update.php" class="zz-coach-form" data-coach-char-form>
+        <form method="POST" action="../../api/coach/update.php" class="zz-coach-form">
             <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
             <input type="hidden" name="thread_id" value="<?= h((string) $threadId) ?>">
 
@@ -127,10 +127,8 @@ function coachTypeLabel(string $type): string
                     class="zz-textarea zz-textarea--journal"
                     rows="5"
                     maxlength="1200"
-                    data-coach-char-source="situation_text"
                     required
                 ><?= h($formData['situation_text']) ?></textarea>
-                <p class="zz-help zz-coach-charcount" data-coach-char-target="situation_text" aria-live="polite"></p>
             </div>
 
             <div class="zz-coach-form__grid">
@@ -157,14 +155,15 @@ function coachTypeLabel(string $type): string
                 </div>
 
                 <div class="zz-field">
-                    <label for="stress_level" class="zz-label">Stress level (1-5)</label>
+                    <label for="stress_level" class="zz-label">What emotions did you experience?</label>
                     <select id="stress_level" name="stress_level" class="zz-select" required>
-                        <?php for ($i = 1; $i <= 5; $i++): ?>
-                            <option value="<?= $i ?>" <?= ((int) $formData['stress_level'] === $i) ? 'selected' : '' ?>>
-                                <?= $i ?>
-                            </option>
-                        <?php endfor; ?>
+                        <option value="1" <?= ((int) $formData['stress_level'] === 1) ? 'selected' : '' ?>>Calm / Grounded</option>
+                        <option value="2" <?= ((int) $formData['stress_level'] === 2) ? 'selected' : '' ?>>Slightly tense</option>
+                        <option value="3" <?= ((int) $formData['stress_level'] === 3) ? 'selected' : '' ?>>Frustrated / Distracted</option>
+                        <option value="4" <?= ((int) $formData['stress_level'] === 4) ? 'selected' : '' ?>>Anxious / Overwhelmed</option>
+                        <option value="5" <?= ((int) $formData['stress_level'] === 5) ? 'selected' : '' ?>>Panicked / Angry</option>
                     </select>
+                    <p class="zz-help">Naming your emotion in the moment is the first step to awareness. Choose the closest fit.</p>
                 </div>
             </div>
 

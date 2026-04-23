@@ -116,10 +116,13 @@ function coachTypeLabel(string $type): string
         </article>
     <?php else: ?>
         <article class="zz-card zz-coach-start" aria-labelledby="zz-coach-start-title">
-            <h3 id="zz-coach-start-title" class="zz-coach-card-title">Start New Situation</h3>
+            <div class="zz-coach-card-head">
+                <h3 id="zz-coach-start-title" class="zz-coach-card-title">Start New Situation</h3>
+                <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/coach/history.php') ?>">View History</a>
+            </div>
             <p class="zz-help">Describe what is happening, add quick context, and get one clear recommendation.</p>
 
-            <form method="POST" action="../../api/coach/submit.php" class="zz-coach-form" data-coach-char-form>
+            <form method="POST" action="../../api/coach/submit.php" class="zz-coach-form">
                 <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
 
                 <div class="zz-field">
@@ -130,11 +133,9 @@ function coachTypeLabel(string $type): string
                         class="zz-textarea zz-textarea--journal"
                         rows="5"
                         maxlength="1200"
-                        data-coach-char-source="situation_text"
                         required
                     ><?= h($formData['situation_text']) ?></textarea>
                     <p class="zz-help">Share enough detail so the recommendation fits your moment.</p>
-                    <p class="zz-help zz-coach-charcount" data-coach-char-target="situation_text" aria-live="polite"></p>
                 </div>
 
                 <div class="zz-coach-form__grid">
@@ -161,14 +162,15 @@ function coachTypeLabel(string $type): string
                     </div>
 
                     <div class="zz-field">
-                        <label for="stress_level" class="zz-label">Stress level (1-5)</label>
+                        <label for="stress_level" class="zz-label">What emotions did you experience?</label>
                         <select id="stress_level" name="stress_level" class="zz-select" required>
-                            <?php for ($i = 1; $i <= 5; $i++): ?>
-                                <option value="<?= $i ?>" <?= ((int) $formData['stress_level'] === $i) ? 'selected' : '' ?>>
-                                    <?= $i ?>
-                                </option>
-                            <?php endfor; ?>
+                            <option value="1" <?= ((int) $formData['stress_level'] === 1) ? 'selected' : '' ?>>Calm / Grounded</option>
+                            <option value="2" <?= ((int) $formData['stress_level'] === 2) ? 'selected' : '' ?>>Slightly tense</option>
+                            <option value="3" <?= ((int) $formData['stress_level'] === 3) ? 'selected' : '' ?>>Frustrated / Distracted</option>
+                            <option value="4" <?= ((int) $formData['stress_level'] === 4) ? 'selected' : '' ?>>Anxious / Overwhelmed</option>
+                            <option value="5" <?= ((int) $formData['stress_level'] === 5) ? 'selected' : '' ?>>Panicked / Angry</option>
                         </select>
+                        <p class="zz-help">Naming your emotion in the moment is the first step to awareness. Choose the closest fit.</p>
                     </div>
                 </div>
 
@@ -189,7 +191,6 @@ function coachTypeLabel(string $type): string
 
                 <div class="zz-coach-form__actions">
                     <button type="submit" class="zz-btn zz-btn--primary">Get Coach Recommendation</button>
-                    <a class="zz-btn zz-btn--ghost" href="<?= h(BASE_URL . '/coach/history.php') ?>">View History</a>
                 </div>
             </form>
         </article>

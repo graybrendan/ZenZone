@@ -132,6 +132,28 @@ function coachTypeLabel(string $type): string
 
     return ucwords($normalized);
 }
+
+function coachCleanRecommendationText(string $text): string
+{
+    $clean = trim($text);
+    if ($clean === '') {
+        return '';
+    }
+
+    $patterns = [
+        '/\s*then\s+(?:log|mark)\s+better\s*,?\s*same\s*,?\s*or\s*worse[^.]*\.?/i',
+        '/\s*(?:log|mark)\s+better\s*,?\s*same\s*,?\s*or\s*worse[^.]*\.?/i',
+        '/\s*better\s*\/\s*same\s*\/\s*worse[^.]*\.?/i',
+    ];
+
+    $clean = preg_replace($patterns, '', $clean);
+    $clean = is_string($clean) ? $clean : '';
+    $clean = preg_replace('/\s{2,}/', ' ', $clean);
+    $clean = preg_replace('/\s+([,.!?;:])/', '$1', $clean);
+    $clean = is_string($clean) ? trim($clean) : '';
+
+    return $clean;
+}
 ?>
 <?php require_once __DIR__ . '/../../includes/partials/header.php'; ?>
 
@@ -143,7 +165,7 @@ function coachTypeLabel(string $type): string
         <div class="zz-coach-thread__meta">
             <span class="zz-badge zz-badge--neutral zz-badge--sm"><?= h(coachTypeLabel((string) ($thread['situation_type'] ?? 'other'))) ?></span>
             <span class="zz-badge zz-badge--sage zz-badge--sm"><?= h((string) ((int) ($thread['time_available'] ?? 0))) ?> min</span>
-            <span class="zz-badge zz-badge--gold zz-badge--sm">Stress <?= h((string) ((int) ($thread['stress_level'] ?? 0))) ?>/5</span>
+            <span class="zz-badge zz-badge--gold zz-badge--sm">Emotion intensity <?= h((string) ((int) ($thread['stress_level'] ?? 0))) ?>/5</span>
         </div>
         <p class="zz-coach-thread__dates zz-date-time">
             Created <?= h($createdLabel) ?>
@@ -159,30 +181,56 @@ function coachTypeLabel(string $type): string
             <div class="zz-alert zz-alert--danger zz-coach-crisis" role="alert">
                 <p><strong>Immediate support recommended</strong></p>
                 <?php if (trim((string) ($coachResponse['crisis_message'] ?? '')) !== ''): ?>
-                    <p><?= h((string) $coachResponse['crisis_message']) ?></p>
+                    <?php $crisisMessage = coachCleanRecommendationText((string) $coachResponse['crisis_message']); ?>
+                    <?php if ($crisisMessage !== ''): ?>
+                        <p><?= h($crisisMessage) ?></p>
+                    <?php endif; ?>
                 <?php endif; ?>
                 <?php if (trim((string) ($coachResponse['coach_message'] ?? '')) !== ''): ?>
-                    <p><?= h((string) $coachResponse['coach_message']) ?></p>
+                    <?php $coachCrisisMessage = coachCleanRecommendationText((string) $coachResponse['coach_message']); ?>
+                    <?php if ($coachCrisisMessage !== ''): ?>
+                        <p><?= h($coachCrisisMessage) ?></p>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         <?php else: ?>
             <?php if (!empty($coachResponse['summary'])): ?>
-                <p class="zz-coach-recommendation__summary"><?= h((string) $coachResponse['summary']) ?></p>
+                <?php $coachSummary = coachCleanRecommendationText((string) $coachResponse['summary']); ?>
+                <?php if ($coachSummary !== ''): ?>
+                    <p class="zz-coach-recommendation__summary"><?= h($coachSummary) ?></p>
+                <?php endif; ?>
             <?php endif; ?>
 
             <?php if ($topRecommendation !== null): ?>
                 <article class="zz-coach-rec-primary">
                     <h4><?= h((string) ($topRecommendation['title'] ?? 'Top recommendation')) ?></h4>
-                    <p class="zz-help"><strong>Why this works:</strong> <?= h((string) ($topRecommendation['why_this_works'] ?? '')) ?></p>
-                    <p class="zz-help"><strong>When to use:</strong> <?= h((string) ($topRecommendation['when_to_use'] ?? '')) ?></p>
+                    <?php $topWhy = coachCleanRecommendationText((string) ($topRecommendation['why_this_works'] ?? '')); ?>
+                    <?php $topWhen = coachCleanRecommendationText((string) ($topRecommendation['when_to_use'] ?? '')); ?>
+                    <?php if ($topWhy !== ''): ?>
+                        <p class="zz-help"><strong>Why this works:</strong> <?= h($topWhy) ?></p>
+                    <?php endif; ?>
+                    <?php if ($topWhen !== ''): ?>
+                        <p class="zz-help"><strong>When to use:</strong> <?= h($topWhen) ?></p>
+                    <?php endif; ?>
                     <p class="zz-help"><strong>Estimated duration:</strong> <?= h((string) ((int) ($topRecommendation['duration_minutes'] ?? 0))) ?> min</p>
 
                     <?php if (!empty($topRecommendation['steps']) && is_array($topRecommendation['steps'])): ?>
-                        <ol class="zz-coach-rec-steps">
-                            <?php foreach ($topRecommendation['steps'] as $step): ?>
-                                <li><?= h((string) $step) ?></li>
-                            <?php endforeach; ?>
-                        </ol>
+                        <?php
+                        $topSteps = [];
+                        foreach ($topRecommendation['steps'] as $step) {
+                            $cleanStep = coachCleanRecommendationText((string) $step);
+                            if ($cleanStep !== '') {
+                                $topSteps[] = $cleanStep;
+                            }
+                        }
+                        ?>
+                        <?php if (!empty($topSteps)): ?>
+                            <ol class="zz-coach-rec-steps">
+                                <?php foreach ($topSteps as $step): ?>
+                                    <li><?= h($step) ?></li>
+                                <?php endforeach; ?>
+                            </ol>
+                        <?php endif; ?>
                     <?php endif; ?>
 
                     <?php if ($topSlug !== '' && $topLessonExists): ?>
@@ -194,7 +242,10 @@ function coachTypeLabel(string $type): string
             <?php endif; ?>
 
             <?php if (!empty($coachResponse['coach_message'])): ?>
-                <p class="zz-coach-recommendation__message"><?= h((string) $coachResponse['coach_message']) ?></p>
+                <?php $coachMessage = coachCleanRecommendationText((string) $coachResponse['coach_message']); ?>
+                <?php if ($coachMessage !== ''): ?>
+                    <p class="zz-coach-recommendation__message"><?= h($coachMessage) ?></p>
+                <?php endif; ?>
             <?php endif; ?>
         <?php endif; ?>
     </article>
@@ -211,16 +262,33 @@ function coachTypeLabel(string $type): string
                     ?>
                     <article class="zz-coach-alt-item">
                         <h4><?= h((string) ($alternative['title'] ?? 'Alternative tool')) ?></h4>
-                        <p class="zz-help"><strong>Why this works:</strong> <?= h((string) ($alternative['why_this_works'] ?? '')) ?></p>
-                        <p class="zz-help"><strong>When to use:</strong> <?= h((string) ($alternative['when_to_use'] ?? '')) ?></p>
+                        <?php $altWhy = coachCleanRecommendationText((string) ($alternative['why_this_works'] ?? '')); ?>
+                        <?php $altWhen = coachCleanRecommendationText((string) ($alternative['when_to_use'] ?? '')); ?>
+                        <?php if ($altWhy !== ''): ?>
+                            <p class="zz-help"><strong>Why this works:</strong> <?= h($altWhy) ?></p>
+                        <?php endif; ?>
+                        <?php if ($altWhen !== ''): ?>
+                            <p class="zz-help"><strong>When to use:</strong> <?= h($altWhen) ?></p>
+                        <?php endif; ?>
                         <p class="zz-help"><strong>Estimated duration:</strong> <?= h((string) ((int) ($alternative['duration_minutes'] ?? 0))) ?> min</p>
 
                         <?php if (!empty($alternative['steps']) && is_array($alternative['steps'])): ?>
-                            <ol class="zz-coach-alt-item__steps">
-                                <?php foreach ($alternative['steps'] as $step): ?>
-                                    <li><?= h((string) $step) ?></li>
-                                <?php endforeach; ?>
-                            </ol>
+                            <?php
+                            $altSteps = [];
+                            foreach ($alternative['steps'] as $step) {
+                                $cleanStep = coachCleanRecommendationText((string) $step);
+                                if ($cleanStep !== '') {
+                                    $altSteps[] = $cleanStep;
+                                }
+                            }
+                            ?>
+                            <?php if (!empty($altSteps)): ?>
+                                <ol class="zz-coach-alt-item__steps">
+                                    <?php foreach ($altSteps as $step): ?>
+                                        <li><?= h($step) ?></li>
+                                    <?php endforeach; ?>
+                                </ol>
+                            <?php endif; ?>
                         <?php endif; ?>
 
                         <?php if ($altLessonExists): ?>
@@ -239,7 +307,7 @@ function coachTypeLabel(string $type): string
             <dd><?= h(coachTypeLabel((string) ($thread['situation_type'] ?? 'other'))) ?></dd>
             <dt>Time available</dt>
             <dd><?= h((string) ((int) ($thread['time_available'] ?? 0))) ?> min</dd>
-            <dt>Stress level</dt>
+            <dt>Emotion intensity</dt>
             <dd><?= h((string) ((int) ($thread['stress_level'] ?? 0))) ?> / 5</dd>
             <dt>Upcoming event</dt>
             <dd><?= h((string) (($thread['upcoming_event'] ?? '') !== '' ? $thread['upcoming_event'] : 'None')) ?></dd>
