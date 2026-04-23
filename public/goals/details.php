@@ -106,6 +106,9 @@ $todaysCheckinStmt->execute([
     'checkin_date' => $today,
 ]);
 $todaysCheckin = $todaysCheckinStmt->fetch();
+if (!is_array($todaysCheckin)) {
+    $todaysCheckin = null;
+}
 
 $historyStmt = $db->prepare("
     SELECT
@@ -302,7 +305,7 @@ $categoryItems = goalDetailsCategories((string) ($goal['category'] ?? ''));
 $periodLabel = $cadenceUnit === 'week' ? 'week' : ($cadenceUnit === 'month' ? 'month' : 'day');
 $latestCheckinForCoach = !empty($recentCheckins) && is_array($recentCheckins[0] ?? null)
     ? $recentCheckins[0]
-    : $todaysCheckin;
+    : (is_array($todaysCheckin) ? $todaysCheckin : null);
 $goalCoachInput = goalDetailsBuildCoachInput($goal, $latestCheckinForCoach, $checkinsThisWindow, $cadenceNumber, $periodLabel);
 $goalCoachResponse = generateRuleBasedCoachResponse($goalCoachInput);
 $goalCoachTop = is_array($goalCoachResponse['top_recommendation'] ?? null)
