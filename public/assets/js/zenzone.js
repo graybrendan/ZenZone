@@ -882,6 +882,141 @@
     });
   }
 
+  function initInstallBanner() {
+    var banner = document.querySelector('[data-zz-install-banner]');
+    if (!banner) {
+      return;
+    }
+
+    if (isStandaloneDisplayMode()) {
+      return;
+    }
+
+    var dismissButton = banner.querySelector('[data-zz-install-dismiss]');
+    var actionButton = banner.querySelector('[data-zz-install-action]');
+    var copyNode = banner.querySelector('[data-zz-install-copy]');
+    var dismissedKey = 'zz_install_banner_dismissed_v1';
+    var deferredPrompt = null;
+    var userAgent = String(window.navigator.userAgent || '');
+    var isIOS = isIOSDevice();
+    var isAndroid = /android/i.test(userAgent);
+    var isMobilePlatform = isIOS || isAndroid;
+    var isSafari =
+      /safari/i.test(userAgent) &&
+      !/crios|fxios|edgios|opios|android/i.test(userAgent);
+
+    function readDismissedState() {
+      try {
+        return window.localStorage.getItem(dismissedKey) === '1';
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function writeDismissedState() {
+      try {
+        window.localStorage.setItem(dismissedKey, '1');
+      } catch (error) {
+        // no-op
+      }
+    }
+
+    function showBanner() {
+      banner.hidden = false;
+    }
+
+    function hideBanner(rememberDismiss) {
+      banner.hidden = true;
+      if (rememberDismiss) {
+        writeDismissedState();
+      }
+    }
+
+    function setCopy(message) {
+      if (copyNode) {
+        copyNode.textContent = message;
+      }
+    }
+
+    if (readDismissedState()) {
+      return;
+    }
+
+    if (!isMobilePlatform) {
+      return;
+    }
+
+    if (actionButton) {
+      actionButton.hidden = true;
+    }
+
+    if (isIOS && isSafari) {
+      setCopy('In Safari, tap Share, then Add to Home Screen for one-tap daily access.');
+      showBanner();
+    } else if (isAndroid) {
+      setCopy('In Chrome, tap the 3-dot menu and choose Add to Home screen or Install app.');
+      showBanner();
+    } else {
+      showBanner();
+    }
+
+    if (dismissButton) {
+      dismissButton.addEventListener('click', function () {
+        hideBanner(true);
+      });
+    }
+
+    if (actionButton) {
+      actionButton.addEventListener('click', function () {
+        if (!deferredPrompt) {
+          return;
+        }
+
+        actionButton.disabled = true;
+        deferredPrompt.prompt();
+
+        deferredPrompt.userChoice
+          .then(function (choiceResult) {
+            var outcome = String((choiceResult && choiceResult.outcome) || '').toLowerCase();
+            if (outcome === 'accepted') {
+              hideBanner(true);
+              return;
+            }
+
+            actionButton.disabled = false;
+            actionButton.hidden = true;
+          })
+          .catch(function () {
+            actionButton.disabled = false;
+            actionButton.hidden = true;
+          });
+
+        deferredPrompt = null;
+      });
+    }
+
+    window.addEventListener('beforeinstallprompt', function (event) {
+      if (!isAndroid) {
+        return;
+      }
+
+      event.preventDefault();
+      deferredPrompt = event;
+      setCopy('Install ZenZone now for one-tap access from your home screen.');
+
+      if (actionButton) {
+        actionButton.hidden = false;
+        actionButton.disabled = false;
+      }
+
+      showBanner();
+    });
+
+    window.addEventListener('appinstalled', function () {
+      hideBanner(true);
+    });
+  }
+
   /* ============ Goals module behaviors ============ */
   function syncGoalCategoryOption(option) {
     if (!option) {
@@ -1168,6 +1303,7 @@
     initPullToRefresh();
     initAuthPasswordFields();
     initAuthLoginEmailMemory();
+    initInstallBanner();
     initGoalCategoryPicker();
     initGoalPriorityAvailability();
     initGoalDeleteConfirm();
