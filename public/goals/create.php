@@ -10,18 +10,60 @@ $db = getDB();
 $userId = (int) $_SESSION['user_id'];
 $error = null;
 
+$goalTemplates = [
+    'meditate' => [
+        'title' => 'Meditate for 5 minutes',
+        'categories' => ['mind'],
+        'cadence_number' => 1,
+        'cadence_unit' => 'day',
+    ],
+    'stretch' => [
+        'title' => 'Stretch after practice',
+        'categories' => ['body'],
+        'cadence_number' => 1,
+        'cadence_unit' => 'day',
+    ],
+    'journal' => [
+        'title' => 'Journal once a week',
+        'categories' => ['soul'],
+        'cadence_number' => 1,
+        'cadence_unit' => 'week',
+    ],
+];
+
+$templateKey = strtolower(trim((string) ($_GET['template'] ?? '')));
+$template = $goalTemplates[$templateKey] ?? null;
+
+$formValues = [
+    'title' => $template['title'] ?? '',
+    'categories' => $template['categories'] ?? [],
+    'cadence_number' => (string) ($template['cadence_number'] ?? 1),
+    'cadence_unit' => (string) ($template['cadence_unit'] ?? 'day'),
+    'start_date' => '',
+    'end_date' => '',
+    'notes' => '',
+];
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $formValues['title'] = trim((string) ($_POST['title'] ?? ''));
+    $formValues['categories'] = is_array($_POST['categories'] ?? null) ? $_POST['categories'] : [];
+    $formValues['cadence_number'] = trim((string) ($_POST['cadence_number'] ?? ''));
+    $formValues['cadence_unit'] = trim((string) ($_POST['cadence_unit'] ?? ''));
+    $formValues['start_date'] = trim((string) ($_POST['start_date'] ?? ''));
+    $formValues['end_date'] = trim((string) ($_POST['end_date'] ?? ''));
+    $formValues['notes'] = trim((string) ($_POST['notes'] ?? ''));
+
     if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
         $error = 'Your request could not be verified. Please try again.';
     }
 
-    $title = trim($_POST['title'] ?? '');
-    $categoriesInput = $_POST['categories'] ?? [];
-    $cadenceNumber = isset($_POST['cadence_number']) ? (int) $_POST['cadence_number'] : 0;
-    $cadenceUnit = trim($_POST['cadence_unit'] ?? '');
-    $startDate = trim($_POST['start_date'] ?? '');
-    $endDate = trim($_POST['end_date'] ?? '');
-    $notes = trim($_POST['notes'] ?? '');
+    $title = trim((string) $formValues['title']);
+    $categoriesInput = $formValues['categories'];
+    $cadenceNumber = (int) $formValues['cadence_number'];
+    $cadenceUnit = trim((string) $formValues['cadence_unit']);
+    $startDate = trim((string) $formValues['start_date']);
+    $endDate = trim((string) $formValues['end_date']);
+    $notes = trim((string) $formValues['notes']);
 
     $allowedCategories = ['body', 'mind', 'soul'];
     $allowedCadenceUnits = ['day', 'week', 'month'];
@@ -35,6 +77,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         )));
     }
+
+    $formValues['categories'] = $selectedCategories;
 
     if ($error === null && $title === '') {
         $error = 'Goal title is required.';
@@ -64,13 +108,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $category = implode(',', $selectedCategories);
-
         $priorityLimits = [
             'daily' => 3,
             'weekly' => 2,
             'monthly' => 1,
         ];
-
         $isPriority = 0;
 
         if (isset($priorityLimits[$cadenceType])) {
@@ -88,7 +130,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             $currentPriorityCount = (int) $countStmt->fetchColumn();
-
             if ($currentPriorityCount < $priorityLimits[$cadenceType]) {
                 $isPriority = 1;
             }
@@ -141,7 +182,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             $newGoalId = (int) $db->lastInsertId();
-
             header('Location: ' . BASE_URL . '/goals/details.php?id=' . $newGoalId);
             exit;
         } catch (PDOException $exception) {
@@ -149,154 +189,239 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$prioritySlots = [
+    'daily' => ['used' => 0, 'limit' => 3, 'label' => 'daily'],
+    'weekly' => ['used' => 0, 'limit' => 2, 'label' => 'weekly'],
+    'monthly' => ['used' => 0, 'limit' => 1, 'label' => 'monthly'],
+];
+
+$priorityStmt = $db->prepare("
+    SELECT cadence_type, COUNT(*) AS total
+    FROM goals
+    WHERE user_id = :user_id
+      AND status = 'active'
+      AND is_priority = 1
+      AND cadence_type IN ('daily', 'weekly', 'monthly')
+    GROUP BY cadence_type
+");
+$priorityStmt->execute([
+    'user_id' => $userId,
+]);
+
+foreach ($priorityStmt->fetchAll() as $slotRow) {
+    $cadenceType = strtolower((string) ($slotRow['cadence_type'] ?? ''));
+    if (!isset($prioritySlots[$cadenceType])) {
+        continue;
+    }
+
+    $prioritySlots[$cadenceType]['used'] = (int) ($slotRow['total'] ?? 0);
+}
+
+function h($value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+
+function createPriorityNote(array $slots, string $cadenceUnit, int $cadenceNumber): string
+{
+    if ($cadenceNumber !== 1) {
+        return 'Custom cadence is not priority-eligible. Use 1 per day, week, or month for priority slots.';
+    }
+
+    $unitMap = [
+        'day' => 'daily',
+        'week' => 'weekly',
+        'month' => 'monthly',
+    ];
+
+    $cadenceType = $unitMap[$cadenceUnit] ?? 'daily';
+    $used = (int) ($slots[$cadenceType]['used'] ?? 0);
+    $limit = (int) ($slots[$cadenceType]['limit'] ?? 0);
+    $available = max(0, $limit - $used);
+
+    if ($available === 0) {
+        return 'All ' . $limit . ' ' . $cadenceType . ' priority slots are in use.';
+    }
+
+    return 'You have ' . $available . ' of ' . $limit . ' ' . $cadenceType . ' priority slots available.';
+}
+
+$cadenceUnitForNote = in_array((string) $formValues['cadence_unit'], ['day', 'week', 'month'], true)
+    ? (string) $formValues['cadence_unit']
+    : 'day';
+$cadenceNumberForNote = max(1, (int) $formValues['cadence_number']);
+$priorityNoteText = createPriorityNote($prioritySlots, $cadenceUnitForNote, $cadenceNumberForNote);
+
+$pageTitle = 'Create Goal';
+$pageEyebrow = 'Goals';
+$pageHelper = 'Define a goal and set a rhythm.';
+$activeNav = 'goals';
+$showBackButton = true;
+$backHref = BASE_URL . '/goals/index.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Goal - ZenZone</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 760px;
-            margin: 0 auto;
-            padding: 24px;
-            line-height: 1.45;
-        }
+<?php require_once __DIR__ . '/../../includes/partials/header.php'; ?>
 
-        form {
-            margin-top: 20px;
-        }
-
-        label {
-            display: block;
-            margin-top: 16px;
-            margin-bottom: 6px;
-            font-weight: bold;
-        }
-
-        input,
-        select,
-        textarea,
-        button {
-            width: 100%;
-            max-width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-
-        textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        .actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 20px;
-        }
-
-        .actions a,
-        .actions button {
-            width: auto;
-            text-decoration: none;
-            padding: 10px 14px;
-            border: 1px solid #999;
-            border-radius: 6px;
-            background: #f7f7f7;
-            color: #000;
-            cursor: pointer;
-        }
-
-        .error {
-            margin-top: 16px;
-            padding: 12px;
-            border: 1px solid #c33;
-            background: #fff4f4;
-            color: #900;
-            border-radius: 6px;
-        }
-
-        .help {
-            color: #555;
-            margin-top: 6px;
-            font-size: 0.95rem;
-        }
-    </style>
-</head>
-<body>
-    <h1>Create Goal</h1>
-    <p>Create a new goal</p>
+<section class="zz-goal-form-page" aria-labelledby="zz-create-goal-form-title">
+    <h2 id="zz-create-goal-form-title" class="zz-visually-hidden">Create goal form</h2>
 
     <?php if ($error !== null): ?>
-        <div class="error"><?php echo htmlspecialchars($error); ?></div>
+        <div class="zz-alert zz-alert--danger" role="alert">
+            <p><?= h($error) ?></p>
+        </div>
     <?php endif; ?>
 
-    <form method="POST" action="">
-        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
-        <label for="title">Goal Title</label>
-        <input
-            type="text"
-            id="title"
-            name="title"
-            value="<?php echo htmlspecialchars($_POST['title'] ?? ''); ?>"
-            required
-        >
+    <form
+        method="POST"
+        action=""
+        class="zz-goal-form"
+        data-goal-priority
+    >
+        <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
 
-        <label>Categories</label>
-        <?php
-            $postedCategories = $_POST['categories'] ?? [];
-            if (!is_array($postedCategories)) {
-                $postedCategories = [];
-            }
-        ?>
-        <label><input type="checkbox" id="category_body" name="categories[]" value="body" <?php echo in_array('body', $postedCategories, true) ? 'checked' : ''; ?>> Body</label>
-        <label><input type="checkbox" id="category_mind" name="categories[]" value="mind" <?php echo in_array('mind', $postedCategories, true) ? 'checked' : ''; ?>> Mind</label>
-        <label><input type="checkbox" id="category_soul" name="categories[]" value="soul" <?php echo in_array('soul', $postedCategories, true) ? 'checked' : ''; ?>> Soul</label>
+        <article class="zz-card zz-goal-form__section">
+            <h3 class="zz-goal-form__section-title">What's your goal?</h3>
 
-        <label for="cadence_number">Cadence</label>
-        <div class="actions">
-            <input
-                type="number"
-                id="cadence_number"
-                name="cadence_number"
-                min="1"
-                value="<?php echo htmlspecialchars($_POST['cadence_number'] ?? '1'); ?>"
-                required
-            >
-            <select id="cadence_unit" name="cadence_unit" required>
-                <option value="day" <?php echo (($_POST['cadence_unit'] ?? 'day') === 'day') ? 'selected' : ''; ?>>Day</option>
-                <option value="week" <?php echo (($_POST['cadence_unit'] ?? '') === 'week') ? 'selected' : ''; ?>>Week</option>
-                <option value="month" <?php echo (($_POST['cadence_unit'] ?? '') === 'month') ? 'selected' : ''; ?>>Month</option>
-            </select>
-        </div>
-        <p class="help">Use 1 per day/week/month for priority-eligible cadence. Higher numbers are treated as custom cadence.</p>
+            <div class="zz-field zz-float" data-zz-float>
+                <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    class="zz-float__control"
+                    placeholder=" "
+                    required
+                    value="<?= h((string) $formValues['title']) ?>"
+                >
+                <label for="title" class="zz-float__label">Goal title</label>
+            </div>
 
-        <label for="start_date">Start Date</label>
-        <input
-            type="date"
-            id="start_date"
-            name="start_date"
-            value="<?php echo htmlspecialchars($_POST['start_date'] ?? ''); ?>"
-        >
+            <div class="zz-field">
+                <div class="zz-field__header">
+                    <label for="notes" class="zz-label">Notes</label>
+                    <span class="zz-optional-tag">Optional</span>
+                </div>
+                <textarea
+                    id="notes"
+                    name="notes"
+                    class="zz-textarea zz-textarea--journal"
+                    rows="4"
+                    placeholder="Why this goal matters to you..."
+                ><?= h((string) $formValues['notes']) ?></textarea>
+            </div>
+        </article>
 
-        <label for="end_date">End Date</label>
-        <input
-            type="date"
-            id="end_date"
-            name="end_date"
-            value="<?php echo htmlspecialchars($_POST['end_date'] ?? ''); ?>"
-        >
+        <article class="zz-card zz-goal-form__section">
+            <h3 class="zz-goal-form__section-title">Focus area</h3>
 
-        <label for="notes">Notes</label>
-        <textarea id="notes" name="notes"><?php echo htmlspecialchars($_POST['notes'] ?? ''); ?></textarea>
+            <div class="zz-category-picker">
+                <label class="zz-category-option" data-goal-category-option>
+                    <span class="zz-checkbox">
+                        <input type="checkbox" name="categories[]" value="body" <?= in_array('body', (array) $formValues['categories'], true) ? 'checked' : '' ?>>
+                        <span class="zz-checkbox__box"></span>
+                    </span>
+                    <span class="zz-category-option__content">
+                        <strong>Body</strong>
+                        <p class="zz-help">Physical health, movement, recovery, sleep, and nutrition. Goals that support how your body performs and heals.</p>
+                    </span>
+                </label>
 
-        <div class="actions">
-            <button type="submit">Create Goal</button>
-            <a href="index.php">Cancel</a>
+                <label class="zz-category-option" data-goal-category-option>
+                    <span class="zz-checkbox">
+                        <input type="checkbox" name="categories[]" value="mind" <?= in_array('mind', (array) $formValues['categories'], true) ? 'checked' : '' ?>>
+                        <span class="zz-checkbox__box"></span>
+                    </span>
+                    <span class="zz-category-option__content">
+                        <strong>Mind</strong>
+                        <p class="zz-help">Focus, mental skills, confidence, preparation, and competitive mindset. Goals that sharpen how you think and prepare.</p>
+                    </span>
+                </label>
+
+                <label class="zz-category-option" data-goal-category-option>
+                    <span class="zz-checkbox">
+                        <input type="checkbox" name="categories[]" value="soul" <?= in_array('soul', (array) $formValues['categories'], true) ? 'checked' : '' ?>>
+                        <span class="zz-checkbox__box"></span>
+                    </span>
+                    <span class="zz-category-option__content">
+                        <strong>Soul</strong>
+                        <p class="zz-help">Purpose, relationships, gratitude, and emotional grounding. Goals that feed who you are beyond your sport.</p>
+                    </span>
+                </label>
+            </div>
+        </article>
+
+        <article class="zz-card zz-goal-form__section">
+            <h3 class="zz-goal-form__section-title">How often?</h3>
+
+            <div class="zz-goal-form__cadence-grid">
+                <div class="zz-field">
+                    <label for="cadence_number" class="zz-label">Cadence number</label>
+                    <input
+                        type="number"
+                        id="cadence_number"
+                        name="cadence_number"
+                        min="1"
+                        class="zz-input"
+                        required
+                        value="<?= h((string) $formValues['cadence_number']) ?>"
+                    >
+                </div>
+
+                <div class="zz-field">
+                    <label for="cadence_unit" class="zz-label">Cadence unit</label>
+                    <select id="cadence_unit" name="cadence_unit" class="zz-select" required>
+                        <option value="day" <?= $cadenceUnitForNote === 'day' ? 'selected' : '' ?>>Day</option>
+                        <option value="week" <?= $cadenceUnitForNote === 'week' ? 'selected' : '' ?>>Week</option>
+                        <option value="month" <?= $cadenceUnitForNote === 'month' ? 'selected' : '' ?>>Month</option>
+                    </select>
+                </div>
+            </div>
+
+            <p class="zz-help">Use 1 per day, week, or month to make this goal priority-eligible. Higher numbers create a custom cadence.</p>
+            <p
+                class="zz-help zz-goal-priority-note"
+                data-goal-priority-note
+                data-daily-used="<?= h((string) $prioritySlots['daily']['used']) ?>"
+                data-daily-limit="<?= h((string) $prioritySlots['daily']['limit']) ?>"
+                data-weekly-used="<?= h((string) $prioritySlots['weekly']['used']) ?>"
+                data-weekly-limit="<?= h((string) $prioritySlots['weekly']['limit']) ?>"
+                data-monthly-used="<?= h((string) $prioritySlots['monthly']['used']) ?>"
+                data-monthly-limit="<?= h((string) $prioritySlots['monthly']['limit']) ?>"
+            ><?= h($priorityNoteText) ?></p>
+        </article>
+
+        <article class="zz-card zz-goal-form__section">
+            <h3 class="zz-goal-form__section-title">When?</h3>
+
+            <div class="zz-goal-form__date-grid">
+                <div class="zz-field">
+                    <label for="start_date" class="zz-label">Start date</label>
+                    <input
+                        type="date"
+                        id="start_date"
+                        name="start_date"
+                        class="zz-input"
+                        value="<?= h((string) $formValues['start_date']) ?>"
+                    >
+                </div>
+
+                <div class="zz-field">
+                    <label for="end_date" class="zz-label">End date</label>
+                    <input
+                        type="date"
+                        id="end_date"
+                        name="end_date"
+                        class="zz-input"
+                        value="<?= h((string) $formValues['end_date']) ?>"
+                    >
+                </div>
+            </div>
+        </article>
+
+        <div class="zz-goal-form__actions">
+            <button type="submit" class="zz-btn zz-btn--primary zz-btn--lg">Create Goal</button>
+            <a href="<?= h(BASE_URL . '/goals/index.php') ?>" class="zz-btn zz-btn--ghost zz-btn--lg">Cancel</a>
         </div>
     </form>
-</body>
-</html>
+</section>
+
+<?php require_once __DIR__ . '/../../includes/partials/footer.php'; ?>

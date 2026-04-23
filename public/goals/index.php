@@ -2,17 +2,50 @@
 require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/date_helpers.php';
 
 requireLogin();
 
 $db = getDB();
 $userId = (int) $_SESSION['user_id'];
-$flash = getFlashMessage();
 
-$stmt = $db->prepare("
+$priorityLimits = [
+    'daily' => 3,
+    'weekly' => 2,
+    'monthly' => 1,
+];
+
+$prioritySlots = [
+    'daily' => ['used' => 0, 'limit' => $priorityLimits['daily'], 'label' => 'Daily'],
+    'weekly' => ['used' => 0, 'limit' => $priorityLimits['weekly'], 'label' => 'Weekly'],
+    'monthly' => ['used' => 0, 'limit' => $priorityLimits['monthly'], 'label' => 'Monthly'],
+];
+
+$priorityCountStmt = $db->prepare("
+    SELECT cadence_type, COUNT(*) AS total
+    FROM goals
+    WHERE user_id = :user_id
+      AND status = 'active'
+      AND is_priority = 1
+      AND cadence_type IN ('daily', 'weekly', 'monthly')
+    GROUP BY cadence_type
+");
+$priorityCountStmt->execute([
+    'user_id' => $userId,
+]);
+
+foreach ($priorityCountStmt->fetchAll() as $row) {
+    $cadenceType = strtolower((string) ($row['cadence_type'] ?? ''));
+    if (!isset($prioritySlots[$cadenceType])) {
+        continue;
+    }
+
+    $prioritySlots[$cadenceType]['used'] = (int) ($row['total'] ?? 0);
+}
+
+$goalsStmt = $db->prepare("
     SELECT
         id,
-        user_id,
         title,
         category,
         cadence_number,
@@ -34,288 +67,214 @@ $stmt = $db->prepare("
             WHEN status = 'completed' THEN 3
             ELSE 4
         END,
-        CASE
-            WHEN cadence_type = 'daily' THEN 1
-            WHEN cadence_type = 'weekly' THEN 2
-            WHEN cadence_type = 'monthly' THEN 3
-            ELSE 4
-        END,
+        is_priority DESC,
         updated_at DESC,
         created_at DESC
 ");
-$stmt->execute([
-    'user_id' => $userId
+$goalsStmt->execute([
+    'user_id' => $userId,
 ]);
 
-$allGoals = $stmt->fetchAll();
+$allGoals = $goalsStmt->fetchAll();
+$hasAnyGoals = !empty($allGoals);
 
-$currentGoals = [];
-$completedGoals = [];
+$activePriorityGoals = [];
+$activeStandardGoals = [];
+$archivedGoals = [];
 
 foreach ($allGoals as $goal) {
-    if (($goal['status'] ?? '') === 'completed') {
-        $completedGoals[] = $goal;
-    } else {
-        $currentGoals[] = $goal;
+    $status = strtolower((string) ($goal['status'] ?? ''));
+    $isPriority = (int) ($goal['is_priority'] ?? 0) === 1;
+
+    if ($status === 'active') {
+        if ($isPriority) {
+            $activePriorityGoals[] = $goal;
+        } else {
+            $activeStandardGoals[] = $goal;
+        }
+        continue;
+    }
+
+    if ($status === 'paused' || $status === 'completed') {
+        $archivedGoals[] = $goal;
     }
 }
 
-function formatGoalMeta(array $goal): string
-{
-    $parts = [];
+$activeGoals = array_merge($activePriorityGoals, $activeStandardGoals);
 
-    if (!empty($goal['category'])) {
-        $categories = array_filter(array_map('trim', explode(',', (string) $goal['category'])));
-        if (!empty($categories)) {
-            $parts[] = implode(', ', array_map('ucfirst', $categories));
-        }
+$pageTitle = 'Goals';
+$pageEyebrow = 'Your Modules';
+$pageHelper = 'Track what matters today.';
+$activeNav = 'goals';
+$showBackButton = false;
+
+function h($value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+
+function goalIndexCategories(string $rawCategory): array
+{
+    $categories = array_filter(array_map('trim', explode(',', $rawCategory)));
+    $categories = array_map('strtolower', $categories);
+    $categories = array_values(array_unique($categories));
+
+    return array_map('ucfirst', $categories);
+}
+
+function goalIndexCadenceLabel(array $goal): string
+{
+    $cadenceType = strtolower((string) ($goal['cadence_type'] ?? ''));
+    if (in_array($cadenceType, ['daily', 'weekly', 'monthly'], true)) {
+        return ucfirst($cadenceType);
     }
 
     $cadenceNumber = max(1, (int) ($goal['cadence_number'] ?? 1));
-    $cadenceUnit = $goal['cadence_unit'] ?? 'day';
+    $cadenceUnit = strtolower((string) ($goal['cadence_unit'] ?? 'day'));
     if (!in_array($cadenceUnit, ['day', 'week', 'month'], true)) {
         $cadenceUnit = 'day';
     }
-    $parts[] = $cadenceNumber . ' per ' . $cadenceUnit;
 
-    return !empty($parts) ? implode(' | ', $parts) : 'No details';
-}
-
-function formatGoalStatus(array $goal): string
-{
-    $status = ucfirst($goal['status'] ?? 'unknown');
-
-    if (!empty($goal['is_priority'])) {
-        return $status . ' | Priority';
-    }
-
-    return $status;
+    return $cadenceNumber . ' per ' . $cadenceUnit;
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Goals - ZenZone</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 24px;
-            line-height: 1.45;
-        }
+<?php require_once __DIR__ . '/../../includes/partials/header.php'; ?>
 
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-        }
+<section class="zz-goals-page zz-goals-index" aria-labelledby="zz-goals-index-title">
+    <h2 id="zz-goals-index-title" class="zz-visually-hidden">Goals overview</h2>
 
-        .section {
-            margin-top: 32px;
-        }
+    <article class="zz-card zz-priority-summary" aria-labelledby="zz-priority-slots-heading">
+        <h3 id="zz-priority-slots-heading" class="zz-section-title">Priority Slots</h3>
+        <div class="zz-priority-slots" role="list">
+            <?php foreach ($prioritySlots as $slot): ?>
+                <?php
+                $used = (int) $slot['used'];
+                $limit = (int) $slot['limit'];
+                $isFull = $used >= $limit;
+                ?>
+                <div class="zz-priority-slot<?= $isFull ? ' zz-priority-slot--full' : '' ?>" role="listitem">
+                    <span class="zz-priority-slot__count"><?= h($used . ' / ' . $limit) ?></span>
+                    <span class="zz-priority-slot__label"><?= h($slot['label']) ?></span>
+                    <span class="zz-priority-slot__track" aria-hidden="true">
+                        <?php for ($i = 0; $i < $limit; $i++): ?>
+                            <span class="zz-priority-slot__dot<?= $i < $used ? ' is-used' : '' ?>"></span>
+                        <?php endfor; ?>
+                    </span>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </article>
 
-        .goal-card {
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            padding: 16px;
-            margin-bottom: 16px;
-        }
+    <?php if (!$hasAnyGoals): ?>
+        <article class="zz-card zz-empty-state">
+            <svg class="zz-empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="8"></circle>
+                <circle cx="12" cy="12" r="4"></circle>
+                <circle cx="12" cy="12" r="1"></circle>
+            </svg>
+            <h2>No goals yet</h2>
+            <p>Start with one of these, or create your own.</p>
 
-        .goal-title {
-            margin: 0 0 8px 0;
-        }
+            <div class="zz-goal-templates">
+                <a class="zz-goal-template" href="<?= h(BASE_URL . '/goals/create.php?template=meditate') ?>">
+                    <span class="zz-badge zz-badge--sage zz-badge--sm">Mind</span>
+                    <strong>Meditate for 5 minutes</strong>
+                    <span class="zz-muted">Daily</span>
+                </a>
+                <a class="zz-goal-template" href="<?= h(BASE_URL . '/goals/create.php?template=stretch') ?>">
+                    <span class="zz-badge zz-badge--sage zz-badge--sm">Body</span>
+                    <strong>Stretch after practice</strong>
+                    <span class="zz-muted">Daily</span>
+                </a>
+                <a class="zz-goal-template" href="<?= h(BASE_URL . '/goals/create.php?template=journal') ?>">
+                    <span class="zz-badge zz-badge--sage zz-badge--sm">Soul</span>
+                    <strong>Journal once a week</strong>
+                    <span class="zz-muted">Weekly</span>
+                </a>
+            </div>
 
-        .goal-meta,
-        .goal-status,
-        .goal-dates,
-        .goal-notes {
-            margin: 6px 0;
-        }
-
-        .actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 12px;
-        }
-
-        .actions form,
-        .actions a {
-            display: inline-block;
-            margin: 0;
-        }
-
-        button,
-        .button-link {
-            padding: 8px 12px;
-            border: 1px solid #999;
-            border-radius: 6px;
-            background: #f7f7f7;
-            text-decoration: none;
-            color: #000;
-            cursor: pointer;
-        }
-
-        .empty-state {
-            color: #666;
-            font-style: italic;
-        }
-
-        hr {
-            margin: 32px 0;
-        }
-    </style>
-</head>
-<body>
-
-    <div class="topbar">
-        <div>
-            <h1 style="margin: 0;">Goals</h1>
-            <p style="margin: 6px 0 0 0;">Track current goals and keep completed goals visible.</p>
+            <a class="zz-btn zz-btn--primary zz-btn--lg" href="<?= h(BASE_URL . '/goals/create.php') ?>">Create Your Own Goal</a>
+        </article>
+    <?php else: ?>
+        <div class="zz-goals-toolbar">
+            <a class="zz-btn zz-btn--primary" href="<?= h(BASE_URL . '/goals/create.php') ?>">Create Goal</a>
         </div>
 
-        <div>
-            <a class="button-link" href="create.php">Create Goal</a>
-            <a class="button-link" href="../dashboard.php">Back to Dashboard</a>
-        </div>
-    </div>
+        <section aria-labelledby="zz-active-goals-heading">
+            <h2 id="zz-active-goals-heading" class="zz-section-title">Active Goals</h2>
 
-    <?php if ($flash): ?>
-        <div class="goal-card" style="border-color: <?php echo (($flash['type'] ?? '') === 'error') ? '#d6a3a3' : '#9bc29b'; ?>; background: <?php echo (($flash['type'] ?? '') === 'error') ? '#fff0f0' : '#eef9ee'; ?>;">
-            <?php echo htmlspecialchars((string) ($flash['message'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
-        </div>
+            <?php if (empty($activeGoals)): ?>
+                <p class="zz-muted">No active goals right now. Resume a paused goal or create a new one.</p>
+            <?php else: ?>
+                <div class="zz-goal-list">
+                    <?php foreach ($activeGoals as $goal): ?>
+                        <?php
+                        $goalId = (int) ($goal['id'] ?? 0);
+                        $categoryLabel = implode(', ', goalIndexCategories((string) ($goal['category'] ?? '')));
+                        ?>
+                        <article class="zz-card zz-goal-card" aria-labelledby="zz-goal-title-<?= h((string) $goalId) ?>">
+                            <div class="zz-goal-card__header">
+                                <h3 id="zz-goal-title-<?= h((string) $goalId) ?>" class="zz-goal-card__title"><?= h((string) ($goal['title'] ?? 'Goal')) ?></h3>
+                                <div class="zz-goal-card__badges">
+                                    <span class="zz-badge zz-badge--sage zz-badge--sm"><?= h(goalIndexCadenceLabel($goal)) ?></span>
+                                    <?php if ((int) ($goal['is_priority'] ?? 0) === 1): ?>
+                                        <span class="zz-badge zz-badge--gold zz-badge--sm">Priority</span>
+                                    <?php endif; ?>
+                                    <?php if ($categoryLabel !== ''): ?>
+                                        <span class="zz-badge zz-badge--neutral zz-badge--sm"><?= h($categoryLabel) ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <p class="zz-goal-card__dates zz-date-value"><?= h(zz_format_date_range($goal['start_date'] ?? null, $goal['end_date'] ?? null)) ?></p>
+
+                            <div class="zz-goal-card__actions">
+                                <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/goals/details.php?id=' . $goalId) ?>">View</a>
+                                <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/goals/edit.php?id=' . $goalId) ?>">Edit</a>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </section>
+
+        <?php if (!empty($archivedGoals)): ?>
+            <details class="zz-goal-archive">
+                <summary class="zz-section-title">Completed &amp; Paused Goals (<?= h((string) count($archivedGoals)) ?>)</summary>
+
+                <div class="zz-goal-list">
+                    <?php foreach ($archivedGoals as $goal): ?>
+                        <?php
+                        $goalId = (int) ($goal['id'] ?? 0);
+                        $status = strtolower((string) ($goal['status'] ?? ''));
+                        $categoryLabel = implode(', ', goalIndexCategories((string) ($goal['category'] ?? '')));
+                        $statusLabel = $status === 'paused' ? 'Paused' : 'Completed';
+                        $statusBadgeClass = $status === 'paused' ? 'zz-badge--gold' : 'zz-badge--neutral';
+                        ?>
+                        <article class="zz-card zz-goal-card zz-goal-card--archived" aria-labelledby="zz-archive-goal-title-<?= h((string) $goalId) ?>">
+                            <div class="zz-goal-card__header">
+                                <h3 id="zz-archive-goal-title-<?= h((string) $goalId) ?>" class="zz-goal-card__title"><?= h((string) ($goal['title'] ?? 'Goal')) ?></h3>
+                                <div class="zz-goal-card__badges">
+                                    <span class="zz-badge zz-badge--sage zz-badge--sm"><?= h(goalIndexCadenceLabel($goal)) ?></span>
+                                    <span class="zz-badge <?= h($statusBadgeClass) ?> zz-badge--sm"><?= h($statusLabel) ?></span>
+                                    <?php if ($categoryLabel !== ''): ?>
+                                        <span class="zz-badge zz-badge--neutral zz-badge--sm"><?= h($categoryLabel) ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <p class="zz-goal-card__dates zz-date-value"><?= h(zz_format_date_range($goal['start_date'] ?? null, $goal['end_date'] ?? null)) ?></p>
+
+                            <div class="zz-goal-card__actions">
+                                <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/goals/details.php?id=' . $goalId) ?>">View</a>
+                                <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/goals/edit.php?id=' . $goalId) ?>">Edit</a>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            </details>
+        <?php endif; ?>
     <?php endif; ?>
+</section>
 
-    <div class="section">
-        <h2>Current Goals</h2>
-
-        <?php if (empty($currentGoals)): ?>
-            <p class="empty-state">No current goals yet.</p>
-        <?php else: ?>
-            <?php foreach ($currentGoals as $goal): ?>
-                <div class="goal-card">
-                    <h3 class="goal-title"><?php echo htmlspecialchars($goal['title']); ?></h3>
-
-                    <p class="goal-meta">
-                        <strong>Type:</strong>
-                        <?php echo htmlspecialchars(formatGoalMeta($goal)); ?>
-                    </p>
-
-                    <p class="goal-status">
-                        <strong>Status:</strong>
-                        <?php echo htmlspecialchars(formatGoalStatus($goal)); ?>
-                    </p>
-
-                    <p class="goal-dates">
-                        <strong>Dates:</strong>
-                        <?php echo htmlspecialchars($goal['start_date'] ?: 'No start date'); ?>
-                        ???
-                        <?php echo htmlspecialchars($goal['end_date'] ?: 'No end date'); ?>
-                    </p>
-
-                    <?php if (!empty($goal['notes'])): ?>
-                        <p class="goal-notes">
-                            <strong>Notes:</strong>
-                            <?php echo nl2br(htmlspecialchars($goal['notes'])); ?>
-                        </p>
-                    <?php endif; ?>
-
-                    <div class="actions">
-                        <a class="button-link" href="details.php?id=<?php echo (int) $goal['id']; ?>">View</a>
-                        <a class="button-link" href="edit.php?id=<?php echo (int) $goal['id']; ?>">Edit</a>
-
-                        <?php if (($goal['status'] ?? '') === 'active'): ?>
-                            <form method="POST" action="../../api/goals/update.php">
-                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
-                                <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
-                                <input type="hidden" name="action" value="pause">
-                                <button type="submit">Pause</button>
-                            </form>
-
-                            <form method="POST" action="../../api/goals/update.php">
-                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
-                                <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
-                                <input type="hidden" name="action" value="complete">
-                                <button type="submit">Complete</button>
-                            </form>
-                        <?php elseif (($goal['status'] ?? '') === 'paused'): ?>
-                            <form method="POST" action="../../api/goals/update.php">
-                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
-                                <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
-                                <input type="hidden" name="action" value="resume">
-                                <button type="submit">Resume</button>
-                            </form>
-
-                            <form method="POST" action="../../api/goals/update.php">
-                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
-                                <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
-                                <input type="hidden" name="action" value="complete">
-                                <button type="submit">Complete</button>
-                            </form>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
-
-    <hr>
-
-    <div class="section">
-        <h2>Completed Goals</h2>
-
-        <?php if (empty($completedGoals)): ?>
-            <p class="empty-state">No completed goals yet.</p>
-        <?php else: ?>
-            <?php foreach ($completedGoals as $goal): ?>
-                <div class="goal-card">
-                    <h3 class="goal-title"><?php echo htmlspecialchars($goal['title']); ?></h3>
-
-                    <p class="goal-meta">
-                        <strong>Type:</strong>
-                        <?php echo htmlspecialchars(formatGoalMeta($goal)); ?>
-                    </p>
-
-                    <p class="goal-status">
-                        <strong>Status:</strong>
-                        Completed
-                    </p>
-
-                    <p class="goal-dates">
-                        <strong>Dates:</strong>
-                        <?php echo htmlspecialchars($goal['start_date'] ?: 'No start date'); ?>
-                        ???
-                        <?php echo htmlspecialchars($goal['end_date'] ?: 'No end date'); ?>
-                    </p>
-
-                    <?php if (!empty($goal['notes'])): ?>
-                        <p class="goal-notes">
-                            <strong>Notes:</strong>
-                            <?php echo nl2br(htmlspecialchars($goal['notes'])); ?>
-                        </p>
-                    <?php endif; ?>
-
-                    <div class="actions">
-                        <a class="button-link" href="details.php?id=<?php echo (int) $goal['id']; ?>">View</a>
-
-                        <form method="POST" action="../../api/goals/delete.php" onsubmit="return confirm('Delete this completed goal? This cannot be undone.');">
-                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
-                            <input type="hidden" name="goal_id" value="<?php echo (int) $goal['id']; ?>">
-                            <button type="submit">Delete</button>
-                        </form>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
-
-</body>
-</html>
-
-
+<?php require_once __DIR__ . '/../../includes/partials/footer.php'; ?>

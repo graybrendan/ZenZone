@@ -882,6 +882,134 @@
     });
   }
 
+  /* ============ Goals module behaviors ============ */
+  function syncGoalCategoryOption(option) {
+    if (!option) {
+      return;
+    }
+
+    var checkbox = option.querySelector('input[type="checkbox"]');
+    if (!checkbox) {
+      return;
+    }
+
+    option.classList.toggle('is-selected', checkbox.checked);
+  }
+
+  function initGoalCategoryPicker() {
+    var categoryOptions = document.querySelectorAll('[data-goal-category-option]');
+    if (!categoryOptions.length) {
+      return;
+    }
+
+    categoryOptions.forEach(function (option) {
+      var checkbox = option.querySelector('input[type="checkbox"]');
+      if (!checkbox) {
+        return;
+      }
+
+      syncGoalCategoryOption(option);
+      checkbox.addEventListener('change', function () {
+        syncGoalCategoryOption(option);
+      });
+    });
+  }
+
+  function readInt(value, fallback) {
+    var parsed = parseInt(String(value || ''), 10);
+    if (Number.isNaN(parsed)) {
+      return fallback;
+    }
+
+    return parsed;
+  }
+
+  function formatGoalPriorityNote(note, cadenceUnit, cadenceNumber) {
+    if (!note) {
+      return;
+    }
+
+    if (cadenceNumber !== 1) {
+      note.textContent =
+        'Custom cadence is not priority-eligible. Use 1 per day, week, or month for priority slots.';
+      note.classList.remove('is-full');
+      return;
+    }
+
+    var keyMap = {
+      day: 'daily',
+      week: 'weekly',
+      month: 'monthly',
+    };
+
+    var cadenceType = keyMap[cadenceUnit] || 'daily';
+    var used = readInt(note.getAttribute('data-' + cadenceType + '-used'), 0);
+    var limit = readInt(note.getAttribute('data-' + cadenceType + '-limit'), 0);
+    var available = Math.max(0, limit - used);
+
+    if (available === 0) {
+      note.textContent = 'All ' + limit + ' ' + cadenceType + ' priority slots are in use.';
+      note.classList.add('is-full');
+      return;
+    }
+
+    note.textContent =
+      'You have ' +
+      available +
+      ' of ' +
+      limit +
+      ' ' +
+      cadenceType +
+      ' priority slots available.';
+    note.classList.remove('is-full');
+  }
+
+  function initGoalPriorityAvailability() {
+    var forms = document.querySelectorAll('[data-goal-priority]');
+    if (!forms.length) {
+      return;
+    }
+
+    forms.forEach(function (form) {
+      var numberInput = form.querySelector('#cadence_number');
+      var unitSelect = form.querySelector('#cadence_unit');
+      var note = form.querySelector('[data-goal-priority-note]');
+
+      if (!numberInput || !unitSelect || !note) {
+        return;
+      }
+
+      function syncPriorityAvailability() {
+        var cadenceNumber = Math.max(1, readInt(numberInput.value, 1));
+        var cadenceUnit = String(unitSelect.value || 'day').toLowerCase();
+        formatGoalPriorityNote(note, cadenceUnit, cadenceNumber);
+      }
+
+      numberInput.addEventListener('input', syncPriorityAvailability);
+      unitSelect.addEventListener('change', syncPriorityAvailability);
+      syncPriorityAvailability();
+    });
+  }
+
+  function initGoalDeleteConfirm() {
+    var deleteForms = document.querySelectorAll('[data-goal-delete-form]');
+    if (!deleteForms.length) {
+      return;
+    }
+
+    deleteForms.forEach(function (form) {
+      form.addEventListener('submit', function (event) {
+        var message =
+          form.getAttribute('data-confirm-message') ||
+          'Delete this item? This cannot be undone.';
+
+        if (!window.confirm(message)) {
+          event.preventDefault();
+        }
+      });
+    });
+  }
+
   function initZenZone() {
     initScales();
     initRadioScales();
@@ -895,6 +1023,9 @@
     initPullToRefresh();
     initAuthPasswordFields();
     initAuthLoginEmailMemory();
+    initGoalCategoryPicker();
+    initGoalPriorityAvailability();
+    initGoalDeleteConfirm();
   }
 
   if (document.readyState === 'loading') {
