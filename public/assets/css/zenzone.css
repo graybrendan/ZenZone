@@ -2039,7 +2039,8 @@ html {
 .zz-hero__brand img {
   display: block;
   width: auto;
-  max-height: 44px;
+  max-height: 30px;
+  max-width: 132px;
   object-fit: contain;
 }
 
@@ -2423,6 +2424,11 @@ html {
 @media (min-width: 768px) {
   .zz-ptr {
     top: calc(64px + env(safe-area-inset-top) + 0.35rem);
+  }
+
+  .zz-hero__brand img {
+    max-height: 36px;
+    max-width: 156px;
   }
 
   .zz-hero {
