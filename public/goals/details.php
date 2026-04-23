@@ -401,43 +401,6 @@ $backHref = BASE_URL . '/goals/index.php';
         <?php endif; ?>
     </article>
 
-    <article class="zz-card zz-goal-coach-card" aria-labelledby="zz-goal-coach-title">
-        <div class="zz-goal-coach-card__header">
-            <h2 id="zz-goal-coach-title">Coach Recommendation</h2>
-            <span class="zz-badge zz-badge--sage zz-badge--sm">Goal Support</span>
-        </div>
-
-        <?php if (!empty($goalCoachResponse['summary'])): ?>
-            <p class="zz-goal-coach-card__summary"><?= h((string) $goalCoachResponse['summary']) ?></p>
-        <?php endif; ?>
-
-        <?php if ($goalCoachTop !== null): ?>
-            <h3 class="zz-goal-coach-card__title"><?= h((string) ($goalCoachTop['title'] ?? 'Recommended next tool')) ?></h3>
-            <p class="zz-help"><strong>Why this works:</strong> <?= h((string) ($goalCoachTop['why_this_works'] ?? '')) ?></p>
-            <p class="zz-help"><strong>When to use:</strong> <?= h((string) ($goalCoachTop['when_to_use'] ?? '')) ?></p>
-            <p class="zz-help"><strong>Estimated duration:</strong> <?= h((string) ((int) ($goalCoachTop['duration_minutes'] ?? 0))) ?> min</p>
-
-            <?php if (!empty($goalCoachTop['steps']) && is_array($goalCoachTop['steps'])): ?>
-                <ol class="zz-goal-coach-card__steps">
-                    <?php foreach ($goalCoachTop['steps'] as $coachStep): ?>
-                        <li><?= h((string) $coachStep) ?></li>
-                    <?php endforeach; ?>
-                </ol>
-            <?php endif; ?>
-        <?php else: ?>
-            <p class="zz-muted">No recommendation was available right now. You can still open Coach for a guided reset.</p>
-        <?php endif; ?>
-
-        <?php if (!empty($goalCoachResponse['coach_message'])): ?>
-            <p class="zz-goal-coach-card__message"><?= h((string) $goalCoachResponse['coach_message']) ?></p>
-        <?php endif; ?>
-
-        <div class="zz-goal-coach-card__actions">
-            <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h($goalCoachToolHref) ?>">Start Recommended Tool</a>
-            <a class="zz-btn zz-btn--ghost zz-btn--sm" href="<?= h(BASE_URL . '/coach/index.php') ?>">Open Coach</a>
-        </div>
-    </article>
-
     <div class="zz-goal-actions" aria-label="Goal actions">
         <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/goals/edit.php?id=' . $goalId) ?>">Edit</a>
 
@@ -542,6 +505,43 @@ $backHref = BASE_URL . '/goals/index.php';
             <dd><?= trim((string) ($goal['notes'] ?? '')) !== '' ? nl2br(h((string) $goal['notes'])) : '<span class="zz-muted">No notes.</span>' ?></dd>
         </dl>
     </details>
+
+    <article class="zz-card zz-goal-coach-card" aria-labelledby="zz-goal-coach-title">
+        <div class="zz-goal-coach-card__header">
+            <h2 id="zz-goal-coach-title">Coach Recommendation</h2>
+            <span class="zz-badge zz-badge--sage zz-badge--sm">Goal Support</span>
+        </div>
+
+        <?php if (!empty($goalCoachResponse['summary'])): ?>
+            <p class="zz-goal-coach-card__summary"><?= h((string) $goalCoachResponse['summary']) ?></p>
+        <?php endif; ?>
+
+        <?php if ($goalCoachTop !== null): ?>
+            <h3 class="zz-goal-coach-card__title"><?= h((string) ($goalCoachTop['title'] ?? 'Recommended next tool')) ?></h3>
+            <p class="zz-help"><strong>Why this works:</strong> <?= h((string) ($goalCoachTop['why_this_works'] ?? '')) ?></p>
+            <p class="zz-help"><strong>When to use:</strong> <?= h((string) ($goalCoachTop['when_to_use'] ?? '')) ?></p>
+            <p class="zz-help"><strong>Estimated duration:</strong> <?= h((string) ((int) ($goalCoachTop['duration_minutes'] ?? 0))) ?> min</p>
+
+            <?php if (!empty($goalCoachTop['steps']) && is_array($goalCoachTop['steps'])): ?>
+                <ol class="zz-goal-coach-card__steps">
+                    <?php foreach ($goalCoachTop['steps'] as $coachStep): ?>
+                        <li><?= h((string) $coachStep) ?></li>
+                    <?php endforeach; ?>
+                </ol>
+            <?php endif; ?>
+        <?php else: ?>
+            <p class="zz-muted">No recommendation was available right now. You can still open Coach for a guided reset.</p>
+        <?php endif; ?>
+
+        <?php if (!empty($goalCoachResponse['coach_message'])): ?>
+            <p class="zz-goal-coach-card__message"><?= h((string) $goalCoachResponse['coach_message']) ?></p>
+        <?php endif; ?>
+
+        <div class="zz-goal-coach-card__actions">
+            <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h($goalCoachToolHref) ?>">Start Recommended Tool</a>
+            <a class="zz-btn zz-btn--ghost zz-btn--sm" href="<?= h(BASE_URL . '/coach/index.php') ?>">Open Coach</a>
+        </div>
+    </article>
 </section>
 
 <?php require_once __DIR__ . '/../../includes/partials/footer.php'; ?>

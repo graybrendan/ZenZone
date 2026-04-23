@@ -11,7 +11,7 @@ if (!function_exists('zz_format_date')) {
     function zz_format_date(?string $dateStr, string $mode = 'smart'): string
     {
         if ($dateStr === null || trim($dateStr) === '') {
-            return '-';
+            return '—';
         }
 
         $timestamp = strtotime($dateStr);
@@ -62,19 +62,19 @@ if (!function_exists('zz_format_date_range')) {
         $s = zz_format_date($start, 'calendar');
         $e = zz_format_date($end, 'calendar');
 
-        if ($s === '-' && $e === '-') {
+        if ($s === '—' && $e === '—') {
             return 'No dates set';
         }
 
-        if ($s === '-') {
+        if ($s === '—') {
             return 'Until ' . $e;
         }
 
-        if ($e === '-') {
+        if ($e === '—') {
             return 'From ' . $s;
         }
 
-        return $s . ' - ' . $e;
+        return $s . ' — ' . $e;
     }
 }
 
@@ -85,7 +85,7 @@ if (!function_exists('zz_format_datetime')) {
     function zz_format_datetime(?string $dateTimeStr): string
     {
         if ($dateTimeStr === null || trim($dateTimeStr) === '') {
-            return '-';
+            return '—';
         }
 
         $timestamp = strtotime($dateTimeStr);
