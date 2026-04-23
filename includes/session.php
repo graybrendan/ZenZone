@@ -9,21 +9,6 @@ function getSessionCookiePath(): string
     return '/';
 }
 
-function isHttpsRequest(): bool
-{
-    $https = strtolower((string) ($_SERVER['HTTPS'] ?? ''));
-    if ($https === 'on' || $https === '1') {
-        return true;
-    }
-
-    if ((string) ($_SERVER['SERVER_PORT'] ?? '') === '443') {
-        return true;
-    }
-
-    $forwardedProto = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
-    return $forwardedProto === 'https';
-}
-
 function setCsrfCookie(string $token): void
 {
     if ($token === '') {
