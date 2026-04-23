@@ -2855,6 +2855,62 @@ html {
   margin-top: 0.75rem;
 }
 
+.zz-goal-coach-card {
+  padding: 1.25rem;
+}
+
+.zz-goal-coach-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.zz-goal-coach-card__header h2 {
+  margin: 0;
+  font-size: var(--zz-text-xl);
+  font-weight: 500;
+}
+
+.zz-goal-coach-card__summary {
+  margin: 0.8rem 0 0.6rem;
+  color: var(--zz-ink-soft);
+}
+
+.zz-goal-coach-card__title {
+  margin: 0 0 0.55rem;
+  font-size: var(--zz-text-lg);
+  font-weight: 500;
+}
+
+.zz-goal-coach-card__steps {
+  margin: 0.6rem 0 0.9rem;
+  padding-left: 1.15rem;
+  color: var(--zz-ink-soft);
+}
+
+.zz-goal-coach-card__steps li + li {
+  margin-top: 0.35rem;
+}
+
+.zz-goal-coach-card__message {
+  margin: 0.75rem 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--zz-sage-wash-strong);
+  border-radius: var(--zz-radius-md);
+  background: var(--zz-sage-wash);
+  color: var(--zz-sage-deep);
+  font-size: var(--zz-text-sm);
+  font-weight: 500;
+}
+
+.zz-goal-coach-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .zz-checkbox--lg {
   gap: 0.875rem;
   align-items: flex-start;

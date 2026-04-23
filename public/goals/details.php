@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/date_helpers.php';
+require_once __DIR__ . '/../../includes/coach_engine.php';
 
 requireLogin();
 
@@ -190,10 +191,111 @@ function goalDetailsStatusBadge(string $status): array
     return ['label' => 'Active', 'class' => 'zz-badge--sage'];
 }
 
+function goalDetailsInferCoachSituationType(array $goal, ?array $latestCheckin, int $checkinsThisWindow): string
+{
+    $status = strtolower((string) ($goal['status'] ?? 'active'));
+    if ($status === 'paused') {
+        return 'low focus';
+    }
+
+    $notes = strtolower(trim((string) ($latestCheckin['notes'] ?? '')));
+    if ($notes !== '' && preg_match('/frustrat|angry|mad|tilt|pissed/', $notes) === 1) {
+        return 'frustration / anger';
+    }
+
+    if ($latestCheckin !== null && (int) ($latestCheckin['is_complete'] ?? 0) !== 1) {
+        return 'confidence dip';
+    }
+
+    if ($checkinsThisWindow === 0) {
+        return 'pre-performance nerves';
+    }
+
+    return 'other';
+}
+
+function goalDetailsBuildCoachInput(
+    array $goal,
+    ?array $latestCheckin,
+    int $checkinsThisWindow,
+    int $cadenceNumber,
+    string $periodLabel
+): array {
+    $cadenceUnit = strtolower((string) ($goal['cadence_unit'] ?? 'day'));
+    if (!in_array($cadenceUnit, ['day', 'week', 'month'], true)) {
+        $cadenceUnit = 'day';
+    }
+
+    $statusLabel = ucfirst(strtolower((string) ($goal['status'] ?? 'active')));
+    $goalTitle = trim((string) ($goal['title'] ?? 'My goal'));
+    $latestDate = zz_format_date($latestCheckin['checkin_date'] ?? null, 'smart');
+    $latestResult = $latestCheckin === null
+        ? 'No recent check-in logged.'
+        : (((int) ($latestCheckin['is_complete'] ?? 0) === 1) ? 'Latest check-in marked complete' : 'Latest check-in marked incomplete');
+    $latestNotes = trim((string) ($latestCheckin['notes'] ?? ''));
+
+    $situationText = 'I am working on the goal "' . $goalTitle . '". ';
+    $situationText .= 'Cadence is ' . $cadenceNumber . 'x per ' . $cadenceUnit . '. ';
+    $situationText .= 'Status is ' . $statusLabel . '. ';
+    $situationText .= $checkinsThisWindow . ' of ' . $cadenceNumber . ' check-ins are used this ' . $periodLabel . '. ';
+    $situationText .= $latestResult . ' (' . $latestDate . '). ';
+    if ($latestNotes !== '') {
+        $situationText .= 'Recent notes: ' . $latestNotes . '.';
+    }
+
+    $timeAvailable = 3;
+    if ($statusLabel === 'Paused') {
+        $timeAvailable = 5;
+    } elseif ($latestCheckin !== null && (int) ($latestCheckin['is_complete'] ?? 0) !== 1) {
+        $timeAvailable = 1;
+    }
+
+    $stressLevel = 3;
+    if ($statusLabel === 'Paused') {
+        $stressLevel = 4;
+    } elseif ($latestCheckin !== null && (int) ($latestCheckin['is_complete'] ?? 0) !== 1) {
+        $stressLevel = 4;
+    } elseif ($latestCheckin !== null && (int) ($latestCheckin['is_complete'] ?? 0) === 1) {
+        $stressLevel = 2;
+    }
+
+    $upcomingEvent = '';
+    if (!empty($goal['end_date'])) {
+        $upcomingEvent = 'hitting this goal by ' . zz_format_date((string) $goal['end_date'], 'calendar');
+    } elseif ($cadenceUnit === 'day') {
+        $upcomingEvent = 'your next daily check-in';
+    } elseif ($cadenceUnit === 'week') {
+        $upcomingEvent = 'your next weekly check-in';
+    } elseif ($cadenceUnit === 'month') {
+        $upcomingEvent = 'your next monthly check-in';
+    }
+
+    return [
+        'situation_text' => $situationText,
+        'situation_type' => goalDetailsInferCoachSituationType($goal, $latestCheckin, $checkinsThisWindow),
+        'time_available' => $timeAvailable,
+        'stress_level' => $stressLevel,
+        'upcoming_event' => $upcomingEvent,
+    ];
+}
+
 $status = strtolower((string) ($goal['status'] ?? 'active'));
 $statusBadge = goalDetailsStatusBadge($status);
 $categoryItems = goalDetailsCategories((string) ($goal['category'] ?? ''));
 $periodLabel = $cadenceUnit === 'week' ? 'week' : ($cadenceUnit === 'month' ? 'month' : 'day');
+$latestCheckinForCoach = !empty($recentCheckins) && is_array($recentCheckins[0] ?? null)
+    ? $recentCheckins[0]
+    : $todaysCheckin;
+$goalCoachInput = goalDetailsBuildCoachInput($goal, $latestCheckinForCoach, $checkinsThisWindow, $cadenceNumber, $periodLabel);
+$goalCoachResponse = generateRuleBasedCoachResponse($goalCoachInput);
+$goalCoachTop = is_array($goalCoachResponse['top_recommendation'] ?? null)
+    ? $goalCoachResponse['top_recommendation']
+    : null;
+$goalCoachSlug = $goalCoachTop !== null ? trim((string) ($goalCoachTop['slug'] ?? '')) : '';
+$goalCoachLesson = $goalCoachSlug !== '' ? getLessonBySlug($goalCoachSlug) : null;
+$goalCoachToolHref = $goalCoachLesson !== null
+    ? BASE_URL . '/content/view.php?slug=' . urlencode($goalCoachSlug)
+    : BASE_URL . '/content/index.php';
 
 $priorityToggleLabel = $isPriority ? 'Remove Priority' : 'Make Priority';
 $priorityActionPath = $isPriority
@@ -277,6 +379,43 @@ $backHref = BASE_URL . '/goals/index.php';
                 <p class="zz-muted">You've completed your check-ins for this <?= h($periodLabel) ?>. Nice work.</p>
             <?php endif; ?>
         <?php endif; ?>
+    </article>
+
+    <article class="zz-card zz-goal-coach-card" aria-labelledby="zz-goal-coach-title">
+        <div class="zz-goal-coach-card__header">
+            <h2 id="zz-goal-coach-title">Coach Recommendation</h2>
+            <span class="zz-badge zz-badge--sage zz-badge--sm">Goal Support</span>
+        </div>
+
+        <?php if (!empty($goalCoachResponse['summary'])): ?>
+            <p class="zz-goal-coach-card__summary"><?= h((string) $goalCoachResponse['summary']) ?></p>
+        <?php endif; ?>
+
+        <?php if ($goalCoachTop !== null): ?>
+            <h3 class="zz-goal-coach-card__title"><?= h((string) ($goalCoachTop['title'] ?? 'Recommended next tool')) ?></h3>
+            <p class="zz-help"><strong>Why this works:</strong> <?= h((string) ($goalCoachTop['why_this_works'] ?? '')) ?></p>
+            <p class="zz-help"><strong>When to use:</strong> <?= h((string) ($goalCoachTop['when_to_use'] ?? '')) ?></p>
+            <p class="zz-help"><strong>Estimated duration:</strong> <?= h((string) ((int) ($goalCoachTop['duration_minutes'] ?? 0))) ?> min</p>
+
+            <?php if (!empty($goalCoachTop['steps']) && is_array($goalCoachTop['steps'])): ?>
+                <ol class="zz-goal-coach-card__steps">
+                    <?php foreach ($goalCoachTop['steps'] as $coachStep): ?>
+                        <li><?= h((string) $coachStep) ?></li>
+                    <?php endforeach; ?>
+                </ol>
+            <?php endif; ?>
+        <?php else: ?>
+            <p class="zz-muted">No recommendation was available right now. You can still open Coach for a guided reset.</p>
+        <?php endif; ?>
+
+        <?php if (!empty($goalCoachResponse['coach_message'])): ?>
+            <p class="zz-goal-coach-card__message"><?= h((string) $goalCoachResponse['coach_message']) ?></p>
+        <?php endif; ?>
+
+        <div class="zz-goal-coach-card__actions">
+            <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h($goalCoachToolHref) ?>">Start Recommended Tool</a>
+            <a class="zz-btn zz-btn--ghost zz-btn--sm" href="<?= h(BASE_URL . '/coach/index.php') ?>">Open Coach</a>
+        </div>
     </article>
 
     <div class="zz-goal-actions" aria-label="Goal actions">
