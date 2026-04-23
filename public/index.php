@@ -74,10 +74,11 @@ require_once __DIR__ . '/../includes/partials/auth_header.php';
     </div>
 </section>
 
-<section class="zz-container zz-landing__section" aria-labelledby="zz-landing-proof-title">
+<section class="zz-container zz-landing__section" aria-labelledby="zz-landing-about-title">
     <article class="zz-card zz-landing__info-card">
-        <p class="zz-section-title zz-landing__eyebrow">WHAT YOU'LL SEE IN THE APP</p>
-        <h2 id="zz-landing-proof-title">Evidence of what ZenZone does</h2>
+        <p class="zz-section-title zz-landing__eyebrow">START HERE</p>
+        <h2 id="zz-landing-about-title">What is ZenZone?</h2>
+        <p>ZenZone is a simple daily system for mental performance. You check in, track patterns, and take one clear next step so you can stay consistent during training and competition.</p>
 
         <div class="zz-grid zz-grid--3">
             <section>
@@ -93,14 +94,6 @@ require_once __DIR__ . '/../includes/partials/auth_header.php';
                 <p>You get line charts and recent data points, so your patterns are visible instead of guesswork.</p>
             </section>
         </div>
-    </article>
-</section>
-
-<section class="zz-container zz-landing__section" aria-labelledby="zz-landing-about-title">
-    <article class="zz-card zz-landing__info-card">
-        <p class="zz-section-title zz-landing__eyebrow">START HERE</p>
-        <h2 id="zz-landing-about-title">What ZenZone is</h2>
-        <p>ZenZone is a simple daily system for mental performance. You check in, track patterns, and take one clear next step so you can stay consistent during training and competition.</p>
 
         <div class="zz-grid zz-grid--2">
             <div>
