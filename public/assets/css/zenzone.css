@@ -3582,3 +3582,268 @@ html {
     flex: 1 1 8.5rem;
   }
 }
+
+/* ============ Lessons module ============ */
+.zz-lessons-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.zz-lessons-filters {
+  margin-bottom: 1.5rem;
+}
+
+.zz-lessons-search {
+  margin-bottom: 1rem;
+}
+
+.zz-lessons-filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.zz-lessons-filter-row .zz-field {
+  margin-bottom: 0;
+}
+
+.zz-lessons-filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.zz-lessons-filter-actions .zz-btn {
+  min-height: 44px;
+}
+
+@media (max-width: 599px) {
+  .zz-lessons-filter-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .zz-lessons-filter-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+.zz-lessons-count {
+  margin-top: 0.75rem;
+  font-size: var(--zz-text-sm);
+}
+
+.zz-lessons-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .zz-lessons-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.zz-lesson-card {
+  background: var(--zz-surface);
+  border: 1px solid var(--zz-border);
+  border-radius: var(--zz-radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  box-shadow: var(--zz-shadow-sm);
+  transition: box-shadow var(--zz-transition);
+}
+
+.zz-lesson-card:hover {
+  box-shadow: var(--zz-shadow-md);
+}
+
+.zz-lesson-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.zz-lesson-card__title {
+  font-family: var(--zz-font-display);
+  font-size: var(--zz-text-lg);
+  font-weight: 500;
+  margin: 0;
+  color: var(--zz-ink);
+}
+
+.zz-lesson-card__meta {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.zz-lesson-card__desc {
+  font-size: var(--zz-text-sm);
+  color: var(--zz-ink-soft);
+  line-height: 1.55;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.zz-lesson-card__details {
+  margin-top: 0.25rem;
+}
+
+.zz-lesson-card__expand {
+  font-size: var(--zz-text-sm);
+  font-weight: 500;
+  color: var(--zz-sage-deep);
+  cursor: pointer;
+  user-select: none;
+}
+
+.zz-lesson-card__expand:hover {
+  text-decoration: underline;
+}
+
+.zz-lesson-card__expanded {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--zz-border);
+}
+
+.zz-lesson-card__expanded p {
+  font-size: var(--zz-text-sm);
+  color: var(--zz-ink-soft);
+  line-height: 1.55;
+  margin: 0 0 0.5rem;
+}
+
+.zz-lesson-card__expanded p:last-child {
+  margin-bottom: 0;
+}
+
+.zz-lesson-card__actions {
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+.zz-lesson-card__actions .zz-btn {
+  min-height: 44px;
+}
+
+.zz-lesson-detail-label {
+  color: var(--zz-sage-deep);
+  font-weight: 600;
+  font-size: var(--zz-text-sm);
+}
+
+.zz-lesson-header {
+  border-left: 4px solid var(--zz-sage);
+}
+
+.zz-lesson-header__meta {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.zz-lesson-header__desc {
+  color: var(--zz-ink-soft);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.zz-lesson-trynow {
+  border: 2px solid var(--zz-sage);
+}
+
+.zz-lesson-trynow h2 {
+  font-family: var(--zz-font-display);
+  font-size: var(--zz-text-2xl);
+  font-weight: 500;
+  margin: 0 0 0.5rem;
+}
+
+.zz-lesson-steps {
+  list-style: none;
+  padding: 0;
+  margin: 1.25rem 0 0;
+  counter-reset: lesson-step;
+}
+
+.zz-lesson-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--zz-border);
+}
+
+.zz-lesson-step:last-child {
+  border-bottom: none;
+}
+
+.zz-lesson-step__number {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--zz-sage-wash);
+  color: var(--zz-sage-deep);
+  font-family: var(--zz-font-display);
+  font-size: var(--zz-text-base);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zz-lesson-step__text {
+  flex: 1;
+  line-height: 1.6;
+  color: var(--zz-ink);
+  padding-top: 0.25rem;
+}
+
+.zz-lesson-why {
+  margin-top: 1rem;
+}
+
+.zz-lesson-why summary {
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--zz-font-display);
+  font-size: var(--zz-text-xl);
+  font-weight: 500;
+}
+
+.zz-lesson-why p {
+  color: var(--zz-ink-soft);
+  line-height: 1.6;
+  margin: 0.75rem 0;
+}
+
+.zz-lesson-when,
+.zz-lesson-evidence {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--zz-border);
+}
+
+.zz-lesson-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 2rem 0 1rem;
+}
+
+.zz-lesson-actions .zz-btn {
+  min-height: 44px;
+}
