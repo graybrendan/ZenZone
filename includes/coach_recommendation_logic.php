@@ -71,6 +71,7 @@ function rankCoachRecommendations(array $input, array $lessonCatalog): array
     applyCoachTimeWeighting($scores, $lessonLookup, (int) ($input['time_available'] ?? 3));
     applyCoachStressWeighting($scores, $lessonLookup, (int) ($input['stress_level'] ?? 3));
     applyCoachUpcomingEventWeighting($scores, $lessonLookup, (string) ($input['upcoming_event'] ?? ''));
+    applyCoachGoalContextWeighting($scores, $lessonLookup, $input);
 
     $sortedSlugs = array_keys($scores);
     usort($sortedSlugs, static function (string $left, string $right) use ($scores, $lessonLookup): int {
@@ -330,6 +331,7 @@ function getCoachSituationTypeRecommendationMap(): array
             'box-breathing-reset',
             'narrow-the-focus',
             'post-practice-reflection',
+            'minimum-viable-rep',
         ],
     ];
 }
@@ -507,6 +509,157 @@ function applyCoachUpcomingEventWeighting(array &$scores, array $lessonLookup, s
     ], $lessonLookup);
 }
 
+function applyCoachGoalContextWeighting(array &$scores, array $lessonLookup, array $input): void
+{
+    $goalTitle = strtolower(trim((string) ($input['goal_title'] ?? '')));
+    $goalStatus = strtolower(trim((string) ($input['goal_status'] ?? '')));
+    $goalCadenceUnit = strtolower(trim((string) ($input['goal_cadence_unit'] ?? '')));
+    $goalCadenceNumber = max(1, (int) ($input['goal_cadence_number'] ?? 1));
+    $goalCheckinsUsed = max(0, (int) ($input['goal_checkins_used'] ?? 0));
+    $goalCheckinsTarget = max(1, (int) ($input['goal_checkins_target'] ?? 1));
+    $goalCategoriesRaw = $input['goal_categories'] ?? [];
+
+    $goalCategories = [];
+    if (is_string($goalCategoriesRaw) && $goalCategoriesRaw !== '') {
+        $goalCategoriesRaw = explode(',', $goalCategoriesRaw);
+    }
+    if (is_array($goalCategoriesRaw)) {
+        foreach ($goalCategoriesRaw as $rawCategory) {
+            $category = strtolower(trim((string) $rawCategory));
+            if (!in_array($category, ['body', 'mind', 'soul'], true)) {
+                continue;
+            }
+            if (in_array($category, $goalCategories, true)) {
+                continue;
+            }
+            $goalCategories[] = $category;
+        }
+    }
+
+    if (in_array('mind', $goalCategories, true)) {
+        applyCoachBoostMap($scores, [
+            'narrow-the-focus' => 85,
+            'confidence-cue-routine' => 75,
+            'visualization-for-the-next-rep' => 65,
+            'if-then-trigger-plan' => 40,
+        ], $lessonLookup);
+    }
+
+    if (in_array('body', $goalCategories, true)) {
+        applyCoachBoostMap($scores, [
+            '60-second-body-scan' => 85,
+            'physiological-sigh-reset' => 75,
+            'pre-performance-grounding' => 55,
+            'minimum-viable-rep' => 45,
+        ], $lessonLookup);
+    }
+
+    if (in_array('soul', $goalCategories, true)) {
+        applyCoachBoostMap($scores, [
+            'post-practice-reflection' => 85,
+            'weekly-review-reset' => 75,
+            'friction-audit-adjustment' => 45,
+        ], $lessonLookup);
+    }
+
+    if ($goalStatus === 'paused') {
+        applyCoachBoostMap($scores, [
+            'minimum-viable-rep' => 95,
+            'if-then-trigger-plan' => 80,
+            'friction-audit-adjustment' => 70,
+        ], $lessonLookup);
+    }
+
+    $remaining = max(0, $goalCheckinsTarget - $goalCheckinsUsed);
+    if ($remaining > 0 && $goalCheckinsUsed === 0) {
+        applyCoachBoostMap($scores, [
+            'minimum-viable-rep' => 90,
+            'if-then-trigger-plan' => 80,
+        ], $lessonLookup);
+    } elseif ($remaining === 0) {
+        applyCoachBoostMap($scores, [
+            'weekly-review-reset' => 70,
+            'post-practice-reflection' => 55,
+        ], $lessonLookup);
+    }
+
+    if ($goalCadenceUnit === 'day' && $goalCadenceNumber === 1) {
+        applyCoachBoostMap($scores, [
+            'if-then-trigger-plan' => 60,
+            'minimum-viable-rep' => 55,
+        ], $lessonLookup);
+    } elseif ($goalCadenceUnit === 'week' || $goalCadenceUnit === 'month') {
+        applyCoachBoostMap($scores, [
+            'weekly-review-reset' => 65,
+            'friction-audit-adjustment' => 60,
+        ], $lessonLookup);
+    }
+
+    if ($goalTitle !== '') {
+        applyCoachGoalTitleKeywordWeighting($scores, $lessonLookup, $goalTitle);
+    }
+}
+
+function applyCoachGoalTitleKeywordWeighting(array &$scores, array $lessonLookup, string $goalTitle): void
+{
+    $groups = [
+        [
+            'terms' => ['sleep', 'recovery', 'rest', 'bedtime'],
+            'boosts' => [
+                '60-second-body-scan' => 75,
+                'post-practice-reflection' => 60,
+                'minimum-viable-rep' => 40,
+            ],
+        ],
+        [
+            'terms' => ['train', 'practice', 'drill', 'lift', 'run', 'workout', 'conditioning', 'stretch'],
+            'boosts' => [
+                'pre-performance-grounding' => 80,
+                'minimum-viable-rep' => 70,
+                'if-then-trigger-plan' => 60,
+            ],
+        ],
+        [
+            'terms' => ['journal', 'gratitude', 'reflect', 'mindset', 'purpose'],
+            'boosts' => [
+                'post-practice-reflection' => 85,
+                'weekly-review-reset' => 70,
+            ],
+        ],
+        [
+            'terms' => ['focus', 'study', 'class', 'read', 'attention', 'concentration'],
+            'boosts' => [
+                'narrow-the-focus' => 90,
+                'if-then-trigger-plan' => 65,
+            ],
+        ],
+        [
+            'terms' => ['confidence', 'calm', 'anxiety', 'nerves'],
+            'boosts' => [
+                'confidence-cue-routine' => 85,
+                'box-breathing-reset' => 70,
+                'physiological-sigh-reset' => 60,
+            ],
+        ],
+        [
+            'terms' => ['habit', 'consistency', 'daily', 'routine'],
+            'boosts' => [
+                'minimum-viable-rep' => 90,
+                'if-then-trigger-plan' => 80,
+                'friction-audit-adjustment' => 60,
+            ],
+        ],
+    ];
+
+    foreach ($groups as $group) {
+        if (!coachTextContainsAny($goalTitle, $group['terms'])) {
+            continue;
+        }
+
+        applyCoachBoostMap($scores, $group['boosts'], $lessonLookup);
+    }
+}
+
 function applyCoachBoostMap(array &$scores, array $boostMap, array $lessonLookup): void
 {
     foreach ($boostMap as $preferredSlug => $boost) {
@@ -570,6 +723,10 @@ function getCoachSlugFallbackMap(): array
         're-center-after-frustration' => ['physiological-sigh-reset', 'box-breathing-reset', 'narrow-the-focus'],
         'visualization-for-the-next-rep' => ['confidence-cue-routine', 'pre-performance-grounding', 'narrow-the-focus'],
         'post-practice-reflection' => ['60-second-body-scan', 'box-breathing-reset', 'narrow-the-focus'],
+        'if-then-trigger-plan' => ['minimum-viable-rep', 'friction-audit-adjustment', 'narrow-the-focus'],
+        'minimum-viable-rep' => ['if-then-trigger-plan', 'friction-audit-adjustment', 'post-practice-reflection'],
+        'friction-audit-adjustment' => ['if-then-trigger-plan', 'weekly-review-reset', 'minimum-viable-rep'],
+        'weekly-review-reset' => ['post-practice-reflection', 'friction-audit-adjustment', 'if-then-trigger-plan'],
     ];
 }
 
@@ -597,6 +754,10 @@ function getCoachBenefitPhraseForSlug(string $slug): string
         'post-practice-reflection' => 'close the session cleanly without rumination',
         'confidence-cue-routine' => 'stabilize confidence around a simple cue',
         'narrow-the-focus' => 'regain focus on one controllable cue',
+        'if-then-trigger-plan' => 'turn intention into a clear action trigger',
+        'minimum-viable-rep' => 'restart consistency with a version you can complete today',
+        'friction-audit-adjustment' => 'identify the blocker and remove resistance before the next attempt',
+        'weekly-review-reset' => 'translate last period into one clear adjustment for the next one',
     ];
 
     return $map[$slug] ?? 'reset and regain focus for the next rep';
@@ -622,4 +783,3 @@ function sanitizeCoachNarrativeLine(string $text, int $maxLength = 220): string
 
     return $clean;
 }
-

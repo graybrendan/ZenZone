@@ -228,6 +228,13 @@ function goalDetailsBuildCoachInput(
 
     $statusLabel = ucfirst(strtolower((string) ($goal['status'] ?? 'active')));
     $goalTitle = trim((string) ($goal['title'] ?? 'My goal'));
+    $goalStatus = strtolower((string) ($goal['status'] ?? 'active'));
+    $goalCategories = array_values(array_unique(array_filter(array_map(
+        static function ($category): string {
+            return strtolower(trim((string) $category));
+        },
+        explode(',', (string) ($goal['category'] ?? ''))
+    ))));
     $latestDate = zz_format_date($latestCheckin['checkin_date'] ?? null, 'smart');
     $latestResult = $latestCheckin === null
         ? 'No recent check-in logged.'
@@ -235,6 +242,9 @@ function goalDetailsBuildCoachInput(
     $latestNotes = trim((string) ($latestCheckin['notes'] ?? ''));
 
     $situationText = 'I am working on the goal "' . $goalTitle . '". ';
+    if (!empty($goalCategories)) {
+        $situationText .= 'Categories: ' . implode(', ', $goalCategories) . '. ';
+    }
     $situationText .= 'Cadence is ' . $cadenceNumber . 'x per ' . $cadenceUnit . '. ';
     $situationText .= 'Status is ' . $statusLabel . '. ';
     $situationText .= $checkinsThisWindow . ' of ' . $cadenceNumber . ' check-ins are used this ' . $periodLabel . '. ';
@@ -276,6 +286,13 @@ function goalDetailsBuildCoachInput(
         'time_available' => $timeAvailable,
         'stress_level' => $stressLevel,
         'upcoming_event' => $upcomingEvent,
+        'goal_title' => $goalTitle,
+        'goal_categories' => $goalCategories,
+        'goal_status' => $goalStatus,
+        'goal_cadence_number' => $cadenceNumber,
+        'goal_cadence_unit' => $cadenceUnit,
+        'goal_checkins_used' => $checkinsThisWindow,
+        'goal_checkins_target' => $cadenceNumber,
     ];
 }
 

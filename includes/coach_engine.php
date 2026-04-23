@@ -132,12 +132,67 @@ function normalizeCoachInput(array $input): array
         $upcomingEvent = substr($upcomingEvent, 0, 120);
     }
 
+    $goalTitle = trim((string) ($input['goal_title'] ?? ''));
+    if (strlen($goalTitle) > 140) {
+        $goalTitle = substr($goalTitle, 0, 140);
+    }
+
+    $goalStatus = strtolower(trim((string) ($input['goal_status'] ?? '')));
+    if (!in_array($goalStatus, ['active', 'paused', 'completed'], true)) {
+        $goalStatus = '';
+    }
+
+    $goalCadenceNumber = max(1, (int) ($input['goal_cadence_number'] ?? 1));
+    if ($goalCadenceNumber > 365) {
+        $goalCadenceNumber = 365;
+    }
+
+    $goalCadenceUnit = strtolower(trim((string) ($input['goal_cadence_unit'] ?? '')));
+    if (!in_array($goalCadenceUnit, ['day', 'week', 'month'], true)) {
+        $goalCadenceUnit = '';
+    }
+
+    $goalCheckinsUsed = max(0, (int) ($input['goal_checkins_used'] ?? 0));
+    if ($goalCheckinsUsed > 365) {
+        $goalCheckinsUsed = 365;
+    }
+
+    $goalCheckinsTarget = max(1, (int) ($input['goal_checkins_target'] ?? 1));
+    if ($goalCheckinsTarget > 365) {
+        $goalCheckinsTarget = 365;
+    }
+
+    $goalCategories = [];
+    $rawGoalCategories = $input['goal_categories'] ?? [];
+    if (is_string($rawGoalCategories) && $rawGoalCategories !== '') {
+        $rawGoalCategories = explode(',', $rawGoalCategories);
+    }
+    if (is_array($rawGoalCategories)) {
+        foreach ($rawGoalCategories as $rawCategory) {
+            $category = strtolower(trim((string) $rawCategory));
+            if (!in_array($category, ['body', 'mind', 'soul'], true)) {
+                continue;
+            }
+            if (in_array($category, $goalCategories, true)) {
+                continue;
+            }
+            $goalCategories[] = $category;
+        }
+    }
+
     return [
         'situation_type' => $situationType,
         'time_available' => $timeAvailable,
         'stress_level' => $stressLevel,
         'situation_text' => $situationText,
         'upcoming_event' => $upcomingEvent,
+        'goal_title' => $goalTitle,
+        'goal_categories' => $goalCategories,
+        'goal_status' => $goalStatus,
+        'goal_cadence_number' => $goalCadenceNumber,
+        'goal_cadence_unit' => $goalCadenceUnit,
+        'goal_checkins_used' => $goalCheckinsUsed,
+        'goal_checkins_target' => $goalCheckinsTarget,
     ];
 }
 
