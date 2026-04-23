@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/session.php';
+require_once __DIR__ . '/../../includes/remember_me.php';
 require_once __DIR__ . '/../../includes/validation.php';
 
 requireGuest();
@@ -173,6 +174,7 @@ try {
 
     $_SESSION['first_name'] = $firstName;
     $_SESSION['user_sport'] = $hasSportColumn && isset($user['sport']) ? trim((string) $user['sport']) : '';
+    zz_remember_issue($db, (int) $_SESSION['user_id'], $_SERVER['HTTP_USER_AGENT'] ?? null);
     authRedirect('dashboard.php');
 } catch (PDOException $e) {
     error_log('Login failed: ' . $e->getMessage());

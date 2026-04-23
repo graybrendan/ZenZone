@@ -2,6 +2,7 @@
 require_once __DIR__ . '/config.php';
 
 const ZENZONE_SESSION_COOKIE_NAME = 'ZENZONESESSID_V2';
+const ZENZONE_SESSION_COOKIE_LIFETIME = 60 * 60 * 24 * 7;
 
 function getSessionCookiePath(): string
 {
@@ -33,7 +34,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
     session_name(ZENZONE_SESSION_COOKIE_NAME);
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => ZENZONE_SESSION_COOKIE_LIFETIME,
         'path' => $sessionCookiePath,
         'secure' => isHttpsRequest(),
         'httponly' => true,
@@ -41,6 +42,20 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
 
     session_start();
+}
+
+if (empty($_SESSION['user_id'])) {
+    require_once __DIR__ . '/remember_me.php';
+
+    if (!function_exists('getDB')) {
+        require_once __DIR__ . '/db.php';
+    }
+
+    try {
+        zz_remember_restore_session(getDB());
+    } catch (Throwable $e) {
+        error_log('Remember-me restore bootstrap failed: ' . $e->getMessage());
+    }
 }
 
 const LOGIN_RATE_LIMIT_MAX_ATTEMPTS = 5;

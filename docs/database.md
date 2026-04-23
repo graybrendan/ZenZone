@@ -131,6 +131,25 @@ Typical fields:
 - response/outcome
 - created_at
 
+### 9. Auth tokens (persistent login)
+Purpose:
+- keep users signed in when mobile browsers evict normal PHP sessions
+- implement split-token remember-me auth (`selector.validator`) with server-side verification
+- support token rotation on use and revocation on logout
+
+Typical fields:
+- id
+- user_id
+- selector
+- validator_hash
+- expires_at
+- last_used_at
+- user_agent
+- created_at
+
+Lifetime:
+- 90 days with sliding expiry (each successful restore extends `expires_at`)
+
 ## Important relationships
 Main expected relationships:
 - one user -> many baseline/check-in/goal/reflection/content records
@@ -151,6 +170,7 @@ Main expected relationships:
 - `daily_zenscore_summary`
 - `goals`
 - `goal_checkins`
+- `auth_tokens`
 
 
 ## Import troubleshooting (phpMyAdmin / XAMPP)
