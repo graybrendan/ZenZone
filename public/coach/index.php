@@ -20,7 +20,6 @@ $formData = [
     'situation_type' => 'other',
     'time_available' => '3',
     'stress_level' => '3',
-    'upcoming_event' => '',
 ];
 
 $oldInputForm = (string) getOldInput('coach_form', '');
@@ -29,7 +28,6 @@ if ($oldInputForm === 'new_situation') {
     $formData['situation_type'] = (string) getOldInput('situation_type', 'other');
     $formData['time_available'] = (string) getOldInput('time_available', '3');
     $formData['stress_level'] = (string) getOldInput('stress_level', '3');
-    $formData['upcoming_event'] = (string) getOldInput('upcoming_event', '');
     clearOldInput();
 }
 
@@ -45,7 +43,6 @@ if (!isValidScaleRating((int) $formData['stress_level'], 1, 5)) {
 
 $recentSituations = [];
 $totalSituations = 0;
-$activeGoals = [];
 
 if ($coachStorageReady) {
     $countStmt = $db->prepare("
@@ -72,17 +69,6 @@ if ($coachStorageReady) {
     ");
     $listStmt->execute(['user_id' => $userId]);
     $recentSituations = $listStmt->fetchAll();
-
-    $activeGoalsStmt = $db->prepare("
-        SELECT id, title, cadence_type, category
-        FROM goals
-        WHERE user_id = :user_id
-          AND status = 'active'
-        ORDER BY is_priority DESC, updated_at DESC
-        LIMIT 3
-    ");
-    $activeGoalsStmt->execute(['user_id' => $userId]);
-    $activeGoals = $activeGoalsStmt->fetchAll();
 }
 
 $pageTitle = 'Coach';
@@ -248,27 +234,6 @@ $showBackButton = false;
                         </label>
                     </div>
                 </div>
-
-                <div class="zz-field zz-float" data-zz-float>
-                    <input type="text" id="upcoming_event" name="upcoming_event" class="zz-float__control" placeholder=" " maxlength="120" value="<?= h($formData['upcoming_event']) ?>">
-                    <label class="zz-float__label" for="upcoming_event">Upcoming event <span class="zz-optional-tag">Optional</span></label>
-                    <p class="zz-help">If something specific is coming up, name it - helps the Coach tailor the recommendation.</p>
-                </div>
-
-                <?php if (!empty($activeGoals)): ?>
-                    <article class="zz-card zz-coach-goals-reminder">
-                        <p class="zz-section-title">Your Active Goals</p>
-                        <p class="zz-help">The Coach considers these when building your recommendation.</p>
-                        <ul class="zz-coach-goals-list">
-                            <?php foreach ($activeGoals as $g): ?>
-                                <li>
-                                    <a href="<?= h(BASE_URL . '/goals/details.php?id=' . (int) ($g['id'] ?? 0)) ?>"><?= h((string) ($g['title'] ?? 'Goal')) ?></a>
-                                    <span class="zz-badge zz-badge--neutral zz-badge--sm"><?= h(ucfirst((string) ($g['cadence_type'] ?? ''))) ?></span>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </article>
-                <?php endif; ?>
 
                 <div class="zz-coach-form__actions">
                     <button type="submit" class="zz-btn zz-btn--primary zz-btn--lg zz-btn--block">Get My Recommendation</button>

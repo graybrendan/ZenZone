@@ -103,20 +103,6 @@ if ($topRecommendation !== null) {
     }
 }
 
-$outcomeStmt = $db->prepare("
-    SELECT outcome, created_at
-    FROM coach_outcomes
-    WHERE thread_id = :thread_id
-      AND user_id = :user_id
-    ORDER BY id DESC
-    LIMIT 1
-");
-$outcomeStmt->execute([
-    'thread_id' => $threadId,
-    'user_id' => $userId,
-]);
-$loggedOutcome = $outcomeStmt->fetch();
-
 $createdAt = (string) ($thread['created_at'] ?? '');
 $updatedAt = (string) ($thread['last_message_at'] ?? $thread['updated_at'] ?? $thread['created_at'] ?? '');
 $createdLabel = zz_format_datetime($createdAt !== '' ? $createdAt : null);
@@ -154,6 +140,7 @@ function coachCleanRecommendationText(string $text): string
         '/\s*then\s+(?:log|mark)\s+better\s*,?\s*same\s*,?\s*or\s*worse[^.]*\.?/i',
         '/\s*(?:log|mark)\s+better\s*,?\s*same\s*,?\s*or\s*worse[^.]*\.?/i',
         '/\s*better\s*\/\s*same\s*\/\s*worse[^.]*\.?/i',
+        '/\s*follow\s+the\s+instructions(?:\s+above)?[^.]*\.?/i',
     ];
 
     $clean = preg_replace($patterns, '', $clean);
@@ -310,36 +297,6 @@ function coachCleanRecommendationText(string $text): string
                 <?php endforeach; ?>
             </div>
         </details>
-    <?php endif; ?>
-
-    <?php
-    $outcomeValue = strtolower(trim((string) ($loggedOutcome['outcome'] ?? '')));
-    $outcomeLabel = $outcomeValue !== '' ? ucfirst($outcomeValue) : '';
-    $outcomeBadgeClass = 'zz-badge--neutral';
-    if ($outcomeValue === 'better') {
-        $outcomeBadgeClass = 'zz-badge--success';
-    } elseif ($outcomeValue === 'worse') {
-        $outcomeBadgeClass = 'zz-badge--warning';
-    }
-    ?>
-    <?php if ($outcomeValue === ''): ?>
-        <article class="zz-card zz-coach-outcome">
-            <h3 class="zz-coach-card-title">How did it go?</h3>
-            <p class="zz-help">After trying the recommendation, log how you feel. This helps improve future suggestions.</p>
-            <form method="POST" action="<?= h(BASE_URL . '/api/coach/outcome.php') ?>" class="zz-coach-outcome-form">
-                <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
-                <input type="hidden" name="thread_id" value="<?= h((string) $threadId) ?>">
-                <div class="zz-outcome-buttons">
-                    <button type="submit" name="outcome" value="better" class="zz-btn zz-btn--success zz-btn--sm">Better</button>
-                    <button type="submit" name="outcome" value="same" class="zz-btn zz-btn--secondary zz-btn--sm">Same</button>
-                    <button type="submit" name="outcome" value="worse" class="zz-btn zz-btn--accent zz-btn--sm">Worse</button>
-                </div>
-            </form>
-        </article>
-    <?php else: ?>
-        <article class="zz-card zz-coach-outcome zz-coach-outcome--logged">
-            <p class="zz-help">You logged: <span class="zz-badge <?= h($outcomeBadgeClass) ?>"><?= h($outcomeLabel) ?></span></p>
-        </article>
     <?php endif; ?>
 
     <div class="zz-coach-actions" aria-label="Coach situation actions">
