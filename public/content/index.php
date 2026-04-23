@@ -8,7 +8,6 @@ requireLogin();
 
 $lessons = getLessonCatalog();
 $topicOptions = getLessonTopics();
-$durationOptions = getLessonDurationOptions();
 
 $searchQuery = trim((string) ($_GET['q'] ?? ''));
 if (strlen($searchQuery) > 80) {
@@ -20,25 +19,14 @@ if ($selectedTopic !== 'all' && !in_array($selectedTopic, $topicOptions, true)) 
     $selectedTopic = 'all';
 }
 
-$selectedDuration = trim((string) ($_GET['duration'] ?? 'all'));
-if ($selectedDuration !== 'all') {
-    if (!ctype_digit($selectedDuration) || !in_array((int) $selectedDuration, $durationOptions, true)) {
-        $selectedDuration = 'all';
-    }
-}
-
 $statusNotice = '';
 $statusCode = trim((string) ($_GET['status'] ?? ''));
 if ($statusCode === 'feature_disabled') {
     $statusNotice = 'Lesson save and progress tracking are currently turned off.';
 }
 
-$filteredLessons = array_values(array_filter($lessons, static function (array $lesson) use ($searchQuery, $selectedTopic, $selectedDuration): bool {
+$filteredLessons = array_values(array_filter($lessons, static function (array $lesson) use ($searchQuery, $selectedTopic): bool {
     if ($selectedTopic !== 'all' && (string) ($lesson['topic'] ?? '') !== $selectedTopic) {
-        return false;
-    }
-
-    if ($selectedDuration !== 'all' && (int) ($lesson['duration_minutes'] ?? 0) !== (int) $selectedDuration) {
         return false;
     }
 
@@ -105,19 +93,9 @@ $showBackButton = false;
                 </select>
             </div>
 
-            <div class="zz-field">
-                <label for="duration" class="zz-label">Duration</label>
-                <select id="duration" name="duration" class="zz-select">
-                    <option value="all">Any duration</option>
-                    <?php foreach ($durationOptions as $minutes): ?>
-                        <option value="<?= (int) $minutes ?>" <?= ((int) $selectedDuration === (int) $minutes) ? 'selected' : '' ?>><?= (int) $minutes ?> min</option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
             <div class="zz-lessons-filter-actions">
                 <button type="submit" class="zz-btn zz-btn--primary zz-btn--sm">Filter</button>
-                <?php if ($searchQuery !== '' || $selectedTopic !== 'all' || $selectedDuration !== 'all'): ?>
+                <?php if ($searchQuery !== '' || $selectedTopic !== 'all'): ?>
                     <a class="zz-btn zz-btn--ghost zz-btn--sm" href="index.php">Clear</a>
                 <?php endif; ?>
             </div>
