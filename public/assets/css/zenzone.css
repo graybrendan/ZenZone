@@ -1544,6 +1544,8 @@ html {
   .zz-appbar__logout,
   .zz-toast,
   .zz-toast.is-dismissing,
+  .zz-ptr,
+  .zz-ptr__icon,
   .zz-bottomnav__item,
   .zz-bottomnav__item::before {
     transition: none !important;
@@ -1921,6 +1923,63 @@ html {
   background: center / contain no-repeat url('../img/logo.png');
 }
 
+.zz-ptr {
+  --zz-ptr-offset: 0px;
+  position: fixed;
+  top: calc(56px + env(safe-area-inset-top) + 0.35rem);
+  left: 50%;
+  z-index: 36;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--zz-border);
+  border-radius: var(--zz-radius-pill);
+  padding: 0.35rem 0.75rem;
+  background: var(--zz-surface);
+  color: var(--zz-ink-soft);
+  font-size: var(--zz-text-xs);
+  font-weight: 600;
+  box-shadow: var(--zz-shadow-sm);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, calc(-130% + var(--zz-ptr-offset)));
+  transition: transform var(--zz-transition), opacity var(--zz-transition), border-color var(--zz-transition), color var(--zz-transition);
+}
+
+.zz-ptr.is-visible {
+  opacity: 1;
+}
+
+.zz-ptr.is-release {
+  border-color: var(--zz-sage);
+  color: var(--zz-sage-deep);
+}
+
+.zz-ptr.is-refreshing {
+  border-color: var(--zz-sage);
+  color: var(--zz-sage-deep);
+}
+
+.zz-ptr__icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 2px solid var(--zz-border-strong);
+  border-top-color: var(--zz-sage);
+  border-radius: 50%;
+}
+
+.zz-ptr.is-refreshing .zz-ptr__icon {
+  border-color: var(--zz-sage-wash-strong);
+  border-top-color: var(--zz-sage-deep);
+  animation: zz-ptr-spin 800ms linear infinite;
+}
+
+@keyframes zz-ptr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .zz-checkin-layout,
 .zz-result-layout,
 .zz-dashboard-stack {
@@ -1971,6 +2030,17 @@ html {
 .zz-hero {
   max-width: 720px;
   padding: 1.5rem 0 2rem;
+}
+
+.zz-hero__brand {
+  margin: 0 0 0.9rem;
+}
+
+.zz-hero__brand img {
+  display: block;
+  width: auto;
+  max-height: 44px;
+  object-fit: contain;
 }
 
 .zz-hero__eyebrow {
@@ -2351,6 +2421,10 @@ html {
 }
 
 @media (min-width: 768px) {
+  .zz-ptr {
+    top: calc(64px + env(safe-area-inset-top) + 0.35rem);
+  }
+
   .zz-hero {
     padding: 2rem 0 2.5rem;
   }

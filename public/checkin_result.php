@@ -124,14 +124,14 @@ function buildStrengthSummary(array $checkin, array $labels): string
     $lowest = $ranked[count($ranked) - 1] ?? null;
 
     if (!is_array($topA) || !is_array($topB) || !is_array($lowest)) {
-        return 'Check-in saved. Keep building on what is already working for you today.';
+        return 'Check-in saved. Keep building on what is already working for you.';
     }
 
-    return 'Your strongest areas today were ' .
+    return 'Your strongest areas in this check-in were ' .
         (string) ($topA['label'] ?? 'one area') . ' and ' .
         (string) ($topB['label'] ?? 'another area') .
         '. Keep leaning on those strengths and give a little extra attention to ' .
-        (string) ($lowest['label'] ?? 'your lowest area') . ' next.';
+        (string) ($lowest['label'] ?? 'your lowest area') . ' in your next check-in.';
 }
 
 $topStartUrl = recommendationStartUrl($topRecommendation);
@@ -142,7 +142,7 @@ $strengthSummary = buildStrengthSummary($checkin, $labels);
 
 <section class="zz-result-layout" aria-labelledby="zz-score-title">
     <article class="zz-card zz-score-card">
-        <h2 id="zz-score-title">Today's ZenScore</h2>
+        <h2 id="zz-score-title">This Check-In's ZenScore</h2>
         <p class="zz-score-card__value" aria-live="polite" aria-atomic="true"><?= h(number_format((float) $checkin['entry_score'], 2)) ?></p>
         <p class="zz-score-card__context"><?= h($strengthSummary) ?></p>
 

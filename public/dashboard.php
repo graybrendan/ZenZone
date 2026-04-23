@@ -34,14 +34,15 @@ $user = $userStmt->fetch();
 
 $baselineComplete = $user ? (int) $user['baseline_complete'] : 0;
 $baselineScore = null;
-$currentDailyScore = null;
-$latestTodayEntryScore = null;
+$hasBaselineAssessmentToday = false;
 
 $baselineStmt = $db->prepare('
-    SELECT baseline_score
+    SELECT
+        baseline_score,
+        DATE(updated_at) AS baseline_updated_date
     FROM baseline_assessments
     WHERE user_id = :user_id
-    ORDER BY created_at DESC
+    ORDER BY updated_at DESC
     LIMIT 1
 ');
 $baselineStmt->execute([
@@ -51,27 +52,13 @@ $baseline = $baselineStmt->fetch();
 
 if ($baseline && isset($baseline['baseline_score'])) {
     $baselineScore = (float) $baseline['baseline_score'];
-}
-
-$dailyStmt = $db->prepare('
-    SELECT daily_score
-    FROM daily_zenscore_summary
-    WHERE user_id = :user_id
-      AND summary_date = :summary_date
-    LIMIT 1
-');
-$dailyStmt->execute([
-    'user_id' => $userId,
-    'summary_date' => $today,
-]);
-$daily = $dailyStmt->fetch();
-
-if ($daily && isset($daily['daily_score'])) {
-    $currentDailyScore = (float) $daily['daily_score'];
+    $hasBaselineAssessmentToday = (string) ($baseline['baseline_updated_date'] ?? '') === $today;
 }
 
 $checkinTodayStmt = $db->prepare('
-    SELECT COUNT(*)
+    SELECT
+        COUNT(*) AS checkin_count,
+        COALESCE(SUM(entry_score), 0) AS total_score
     FROM check_ins
     WHERE user_id = :user_id
       AND checkin_date = :checkin_date
@@ -80,28 +67,10 @@ $checkinTodayStmt->execute([
     'user_id' => $userId,
     'checkin_date' => $today,
 ]);
-$checkinCountToday = (int) $checkinTodayStmt->fetchColumn();
+$checkinTodayAggregate = $checkinTodayStmt->fetch() ?: [];
+$checkinCountToday = (int) ($checkinTodayAggregate['checkin_count'] ?? 0);
+$todayCheckinTotalScore = round((float) ($checkinTodayAggregate['total_score'] ?? 0), 2);
 $hasCheckedInToday = $checkinCountToday > 0;
-
-if ($hasCheckedInToday && $currentDailyScore === null) {
-    $latestTodayStmt = $db->prepare('
-        SELECT entry_score
-        FROM check_ins
-        WHERE user_id = :user_id
-          AND checkin_date = :checkin_date
-        ORDER BY created_at DESC, id DESC
-        LIMIT 1
-    ');
-    $latestTodayStmt->execute([
-        'user_id' => $userId,
-        'checkin_date' => $today,
-    ]);
-
-    $latestToday = $latestTodayStmt->fetch();
-    if ($latestToday && isset($latestToday['entry_score'])) {
-        $latestTodayEntryScore = (float) $latestToday['entry_score'];
-    }
-}
 
 $dailyDoneStmt = $db->prepare('
     SELECT COUNT(DISTINCT g.id)
@@ -223,11 +192,6 @@ if ($baselineComplete !== 1) {
     $contextLine = 'Haven\'t checked in yet today. Ready when you are.';
 }
 
-$todayScoreValue = null;
-if ($hasCheckedInToday) {
-    $todayScoreValue = $currentDailyScore ?? $latestTodayEntryScore;
-}
-
 $baselineScoreForDisplay = null;
 if ($baselineScore !== null) {
     $baselineScoreForDisplay = $baselineScore <= 7
@@ -235,9 +199,19 @@ if ($baselineScore !== null) {
         : (float) $baselineScore;
 }
 
+$todayBaselineInfluenceScore = $hasBaselineAssessmentToday ? $baselineScoreForDisplay : null;
+$dailyInfluenceCount = $checkinCountToday + ($todayBaselineInfluenceScore !== null ? 1 : 0);
+$dailyCumulativeScore = null;
+if ($dailyInfluenceCount > 0) {
+    $dailyCumulativeScore = round(
+        ($todayCheckinTotalScore + (float) ($todayBaselineInfluenceScore ?? 0)) / $dailyInfluenceCount,
+        2
+    );
+}
+
 $deltaFromBaseline = null;
-if ($todayScoreValue !== null && $baselineScoreForDisplay !== null) {
-    $deltaFromBaseline = round((float) $todayScoreValue - (float) $baselineScoreForDisplay, 2);
+if ($dailyCumulativeScore !== null && $baselineScoreForDisplay !== null) {
+    $deltaFromBaseline = round((float) $dailyCumulativeScore - (float) $baselineScoreForDisplay, 2);
 }
 
 $pageTitle = null;
@@ -245,6 +219,9 @@ $pageEyebrow = null;
 $pageHelper = null;
 $activeNav = 'home';
 $showBackButton = false;
+$dashboardTopLogoPath = is_file(__DIR__ . '/assets/img/log.png')
+    ? BASE_URL . '/assets/img/log.png'
+    : BASE_URL . '/assets/img/logo.png';
 
 function h($value): string
 {
@@ -309,6 +286,9 @@ function dashboardGoalStatusLabel(array $goal): string
 
 <section class="zz-dashboard-screen zz-dashboard-stack">
     <section class="zz-hero" aria-labelledby="zz-dashboard-greeting">
+        <div class="zz-hero__brand">
+            <img src="<?= h($dashboardTopLogoPath) ?>" alt="ZenZone">
+        </div>
         <p class="zz-hero__eyebrow"><?= h($nowLocal->format('l, F j')) ?></p>
         <h1 id="zz-dashboard-greeting" class="zz-hero__greeting">Good <?= h($timeOfDay) ?>, <?= h($firstName) ?>.</h1>
         <p class="zz-hero__context"><?= h($contextLine) ?></p>
@@ -325,13 +305,13 @@ function dashboardGoalStatusLabel(array $goal): string
     <div class="zz-dashboard-grid">
         <?php if ($baselineComplete === 1): ?>
             <article class="zz-card zz-score-card" aria-labelledby="zz-dashboard-score-title">
-                <?php if ($hasCheckedInToday && $todayScoreValue !== null): ?>
-                    <?php $todayRing = dashboardScoreRingData((float) $todayScoreValue); ?>
-                    <p class="zz-score-card__label" id="zz-dashboard-score-title">Today's ZenScore</p>
+                <p class="zz-score-card__label" id="zz-dashboard-score-title">Your Daily ZenScore</p>
 
-                    <?php if ($todayRing !== null): ?>
+                <?php if ($dailyCumulativeScore !== null): ?>
+                    <?php $dailyRing = dashboardScoreRingData((float) $dailyCumulativeScore); ?>
+                    <?php if ($dailyRing !== null): ?>
                         <div class="zz-score-ring-wrap">
-                            <div class="zz-score-ring <?= h((string) $todayRing['tone']) ?>" role="img" aria-label="<?= h((string) $todayRing['display']) ?> out of 100">
+                            <div class="zz-score-ring <?= h((string) $dailyRing['tone']) ?>" role="img" aria-label="<?= h((string) $dailyRing['display']) ?> out of 100">
                                 <svg class="zz-score-ring__svg" viewBox="0 0 100 100" aria-hidden="true">
                                     <circle class="zz-score-ring__track" cx="50" cy="50" r="42"></circle>
                                     <circle
@@ -339,10 +319,10 @@ function dashboardGoalStatusLabel(array $goal): string
                                         cx="50"
                                         cy="50"
                                         r="42"
-                                        stroke-dasharray="<?= h(number_format((float) $todayRing['progress'], 2, '.', '')) ?> <?= h(number_format((float) $todayRing['remaining'], 2, '.', '')) ?>"
+                                        stroke-dasharray="<?= h(number_format((float) $dailyRing['progress'], 2, '.', '')) ?> <?= h(number_format((float) $dailyRing['remaining'], 2, '.', '')) ?>"
                                     ></circle>
                                 </svg>
-                                <span class="zz-score-ring__value"><?= h((string) $todayRing['display']) ?></span>
+                                <span class="zz-score-ring__value"><?= h((string) $dailyRing['display']) ?></span>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -362,34 +342,15 @@ function dashboardGoalStatusLabel(array $goal): string
                         <span class="zz-score-card__delta <?= h($deltaClass) ?>"><?= h($deltaText) ?></span>
                     <?php endif; ?>
 
-                    <?php if ($currentDailyScore === null): ?>
-                        <p class="zz-score-card__context">Today's summary is still updating. Showing your latest check-in score.</p>
+                    <?php if ($hasCheckedInToday && $hasBaselineAssessmentToday): ?>
+                        <p class="zz-score-card__context">Includes every check-in plus your baseline assessment updated today.</p>
+                    <?php elseif ($hasCheckedInToday): ?>
+                        <p class="zz-score-card__context">Includes every check-in logged today.</p>
                     <?php else: ?>
-                        <p class="zz-score-card__context">Based on your check-ins so far today.</p>
+                        <p class="zz-score-card__context">Based on your baseline assessment updated today.</p>
                     <?php endif; ?>
                 <?php else: ?>
-                    <?php $baselineRing = dashboardScoreRingData($baselineScoreForDisplay); ?>
-                    <p class="zz-score-card__label" id="zz-dashboard-score-title">Your baseline score</p>
-
-                    <?php if ($baselineRing !== null): ?>
-                        <div class="zz-score-ring-wrap">
-                            <div class="zz-score-ring <?= h((string) $baselineRing['tone']) ?>" role="img" aria-label="<?= h((string) $baselineRing['display']) ?> out of 100">
-                                <svg class="zz-score-ring__svg" viewBox="0 0 100 100" aria-hidden="true">
-                                    <circle class="zz-score-ring__track" cx="50" cy="50" r="42"></circle>
-                                    <circle
-                                        class="zz-score-ring__progress"
-                                        cx="50"
-                                        cy="50"
-                                        r="42"
-                                        stroke-dasharray="<?= h(number_format((float) $baselineRing['progress'], 2, '.', '')) ?> <?= h(number_format((float) $baselineRing['remaining'], 2, '.', '')) ?>"
-                                    ></circle>
-                                </svg>
-                                <span class="zz-score-ring__value"><?= h((string) $baselineRing['display']) ?></span>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-
-                    <p class="zz-score-card__context">Your first check-in will generate today's score.</p>
+                    <p class="zz-score-card__context">No daily score yet. Log a check-in or update your baseline today to build your daily ZenScore.</p>
                 <?php endif; ?>
             </article>
         <?php endif; ?>

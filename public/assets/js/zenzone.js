@@ -622,6 +622,185 @@
     applyFallbackActiveState(fallbackKey, '.zz-appbar__mobile-nav-link');
   }
 
+  function isIOSDevice() {
+    var userAgent = String(window.navigator.userAgent || '');
+    var platform = String(window.navigator.platform || '');
+    var maxTouchPoints = Number(window.navigator.maxTouchPoints || 0);
+
+    return /iP(hone|ad|od)/.test(userAgent) || (platform === 'MacIntel' && maxTouchPoints > 1);
+  }
+
+  function isStandaloneDisplayMode() {
+    var legacyStandalone = Boolean(window.navigator.standalone);
+    var mediaStandalone =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(display-mode: standalone)').matches;
+
+    return legacyStandalone || mediaStandalone;
+  }
+
+  function initPullToRefresh() {
+    if (!isIOSDevice() || !isStandaloneDisplayMode()) {
+      return;
+    }
+
+    var scrollRoot = document.scrollingElement || document.documentElement;
+    if (!scrollRoot || !document.body) {
+      return;
+    }
+
+    var indicator = document.createElement('div');
+    indicator.className = 'zz-ptr';
+    indicator.setAttribute('role', 'status');
+    indicator.setAttribute('aria-live', 'polite');
+    indicator.setAttribute('aria-atomic', 'true');
+    indicator.innerHTML =
+      '<span class="zz-ptr__icon" aria-hidden="true"></span>' +
+      '<span class="zz-ptr__text">Pull to refresh</span>';
+    document.body.appendChild(indicator);
+
+    var textNode = indicator.querySelector('.zz-ptr__text');
+    var maxPullDistance = 116;
+    var triggerDistance = 72;
+    var startY = 0;
+    var pullDistance = 0;
+    var active = false;
+    var refreshing = false;
+
+    function setMessage(message) {
+      if (textNode) {
+        textNode.textContent = String(message || '');
+      }
+    }
+
+    function setOffset(distance) {
+      indicator.style.setProperty('--zz-ptr-offset', String(Math.max(0, distance)) + 'px');
+    }
+
+    function resetIndicator() {
+      pullDistance = 0;
+      setOffset(0);
+      setMessage('Pull to refresh');
+      indicator.classList.remove('is-release', 'is-refreshing');
+
+      window.setTimeout(function () {
+        if (!refreshing) {
+          indicator.classList.remove('is-visible');
+        }
+      }, 140);
+    }
+
+    function shouldIgnoreTarget(target) {
+      if (!target || !target.closest) {
+        return false;
+      }
+
+      return Boolean(
+        target.closest(
+          'input, textarea, select, button, [contenteditable="true"], .zz-appbar, .zz-appbar__dropdown, [data-zz-menu-panel]'
+        )
+      );
+    }
+
+    document.addEventListener(
+      'touchstart',
+      function (event) {
+        if (refreshing || active) {
+          return;
+        }
+
+        if (!event.touches || event.touches.length !== 1) {
+          return;
+        }
+
+        if (scrollRoot.scrollTop > 0) {
+          return;
+        }
+
+        if (shouldIgnoreTarget(event.target)) {
+          return;
+        }
+
+        startY = event.touches[0].clientY;
+        pullDistance = 0;
+        active = true;
+        indicator.classList.add('is-visible');
+        indicator.classList.remove('is-release');
+        setMessage('Pull to refresh');
+        setOffset(0);
+      },
+      { passive: true }
+    );
+
+    document.addEventListener(
+      'touchmove',
+      function (event) {
+        if (!active || refreshing) {
+          return;
+        }
+
+        if (!event.touches || event.touches.length !== 1) {
+          return;
+        }
+
+        if (scrollRoot.scrollTop > 0) {
+          active = false;
+          resetIndicator();
+          return;
+        }
+
+        var delta = event.touches[0].clientY - startY;
+        if (delta <= 0) {
+          pullDistance = 0;
+          setOffset(0);
+          indicator.classList.remove('is-release');
+          setMessage('Pull to refresh');
+          return;
+        }
+
+        pullDistance = Math.min(maxPullDistance, delta * 0.48);
+        setOffset(pullDistance);
+
+        if (pullDistance >= triggerDistance) {
+          indicator.classList.add('is-release');
+          setMessage('Release to refresh');
+        } else {
+          indicator.classList.remove('is-release');
+          setMessage('Pull to refresh');
+        }
+
+        event.preventDefault();
+      },
+      { passive: false }
+    );
+
+    function handleTouchEnd() {
+      if (!active || refreshing) {
+        return;
+      }
+
+      active = false;
+
+      if (pullDistance >= triggerDistance) {
+        refreshing = true;
+        indicator.classList.remove('is-release');
+        indicator.classList.add('is-refreshing', 'is-visible');
+        setOffset(triggerDistance);
+        setMessage('Refreshing...');
+
+        window.setTimeout(function () {
+          window.location.reload();
+        }, 160);
+        return;
+      }
+
+      resetIndicator();
+    }
+
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    document.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+  }
+
   /* ============ Auth page behaviors ============ */
   function initAuthPasswordFields() {
     var passwordFields = document.querySelectorAll('.zz-password-field');
@@ -713,6 +892,7 @@
     initFlashToasts();
     initPreviewToastTriggers();
     initNavFallback();
+    initPullToRefresh();
     initAuthPasswordFields();
     initAuthLoginEmailMemory();
   }
