@@ -1,0 +1,23 @@
+{
+  "name": "ZenZone",
+  "short_name": "ZenZone",
+  "id": "./",
+  "start_url": "./index.php",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "browser"
+  ],
+  "background_color": "#FAF8F3",
+  "theme_color": "#7A9B76",
+  "description": "ZenZone supports mindful check-ins, focused goals, and grounded coaching moments.",
+  "icons": [
+    {
+      "src": "./assets/img/logo.png",
+      "sizes": "1895x1895",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

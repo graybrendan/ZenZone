@@ -85,7 +85,9 @@ if ($zzUserName === '') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#7A9B76">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ZenZone">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="description" content="<?= htmlspecialchars($pageDescription, ENT_QUOTES, 'UTF-8') ?>">
     <title><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?> &mdash; ZenZone</title>
@@ -93,6 +95,7 @@ if ($zzUserName === '') {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="icon" href="<?= htmlspecialchars($iconHref, ENT_QUOTES, 'UTF-8') ?>">
     <link rel="apple-touch-icon" href="<?= htmlspecialchars($appleTouchHref, ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="manifest" href="<?= htmlspecialchars(BASE_URL . '/manifest.json', ENT_QUOTES, 'UTF-8') ?>">
     <!-- If a page also loads Bootstrap, include Bootstrap before zenzone.css. -->
     <link rel="stylesheet" href="<?= htmlspecialchars(BASE_URL . '/assets/css/zenzone.css', ENT_QUOTES, 'UTF-8') ?>">
 </head>
