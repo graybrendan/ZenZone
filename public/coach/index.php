@@ -109,7 +109,7 @@ $showBackButton = false;
         <article class="zz-card zz-coach-start" aria-labelledby="zz-coach-start-title">
             <div class="zz-coach-card-head">
                 <h3 id="zz-coach-start-title" class="zz-coach-card-title">Start New Situation</h3>
-                <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/coach/history.php') ?>">View History</a>
+                <a class="zz-btn zz-btn--accent zz-btn--sm" href="<?= h(BASE_URL . '/coach/history.php') ?>">View History</a>
             </div>
             <p class="zz-help">Describe what is happening, add quick context, and get one clear recommendation.</p>
 
