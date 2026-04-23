@@ -2,14 +2,24 @@
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/session.php';
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/zenscore.php';
 
 requireLogin();
 
 $db = getDB();
 $userId = (int) $_SESSION['user_id'];
-$today = date('Y-m-d');
-$weekStart = date('Y-m-d', strtotime('monday this week'));
-$monthStart = date('Y-m-01');
+
+$displayTimezoneName = trim((string) getEnvOrDefault('APP_TIMEZONE', 'America/New_York'));
+try {
+    $displayTimezone = new DateTimeZone($displayTimezoneName);
+} catch (Throwable $e) {
+    $displayTimezone = new DateTimeZone('America/New_York');
+}
+
+$nowLocal = new DateTimeImmutable('now', $displayTimezone);
+$today = $nowLocal->format('Y-m-d');
+$weekStart = $nowLocal->modify('monday this week')->format('Y-m-d');
+$monthStart = $nowLocal->format('Y-m-01');
 
 $userStmt = $db->prepare('
     SELECT baseline_complete
@@ -163,13 +173,40 @@ $completedGoalsStmt->execute([
 ]);
 $completedGoalsCount = (int) $completedGoalsStmt->fetchColumn();
 
+$currentGoalsStmt = $db->prepare("
+    SELECT
+        id,
+        title,
+        cadence_type,
+        cadence_number,
+        cadence_unit,
+        status,
+        is_priority
+    FROM goals
+    WHERE user_id = :user_id
+      AND status IN ('active', 'paused')
+    ORDER BY
+        CASE
+            WHEN status = 'active' THEN 1
+            ELSE 2
+        END,
+        is_priority DESC,
+        updated_at DESC,
+        created_at DESC
+    LIMIT 4
+");
+$currentGoalsStmt->execute([
+    'user_id' => $userId,
+]);
+$currentGoals = $currentGoalsStmt->fetchAll();
+
 $firstName = trim((string) ($_SESSION['first_name'] ?? ''));
 if ($firstName === '') {
     $fullName = trim((string) ($_SESSION['user_name'] ?? $_SESSION['full_name'] ?? ''));
     $firstName = $fullName !== '' ? explode(' ', $fullName)[0] : 'there';
 }
 
-$hour = (int) date('G');
+$hour = (int) $nowLocal->format('G');
 if ($hour < 12) {
     $timeOfDay = 'morning';
 } elseif ($hour < 17) {
@@ -191,9 +228,16 @@ if ($hasCheckedInToday) {
     $todayScoreValue = $currentDailyScore ?? $latestTodayEntryScore;
 }
 
+$baselineScoreForDisplay = null;
+if ($baselineScore !== null) {
+    $baselineScoreForDisplay = $baselineScore <= 7
+        ? zenzone_convert_to_zenscore((float) $baselineScore)
+        : (float) $baselineScore;
+}
+
 $deltaFromBaseline = null;
-if ($todayScoreValue !== null && $baselineScore !== null) {
-    $deltaFromBaseline = round((float) $todayScoreValue - (float) $baselineScore, 2);
+if ($todayScoreValue !== null && $baselineScoreForDisplay !== null) {
+    $deltaFromBaseline = round((float) $todayScoreValue - (float) $baselineScoreForDisplay, 2);
 }
 
 $pageTitle = null;
@@ -206,12 +250,66 @@ function h($value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
+
+function dashboardScoreRingData(?float $score): ?array
+{
+    if ($score === null) {
+        return null;
+    }
+
+    $scoreInt = (int) round($score);
+    $scoreInt = max(0, min(100, $scoreInt));
+
+    $circumference = 263.89;
+    $progress = round(($scoreInt / 100) * $circumference, 2);
+    $remaining = max(0, round($circumference - $progress, 2));
+
+    $toneClass = 'zz-score-ring--low';
+    if ($scoreInt >= 70) {
+        $toneClass = 'zz-score-ring--high';
+    } elseif ($scoreInt >= 45) {
+        $toneClass = 'zz-score-ring--mid';
+    }
+
+    return [
+        'display' => $scoreInt,
+        'progress' => $progress,
+        'remaining' => $remaining,
+        'tone' => $toneClass,
+    ];
+}
+
+function dashboardGoalCadenceLabel(array $goal): string
+{
+    $cadenceType = strtolower((string) ($goal['cadence_type'] ?? ''));
+    if (in_array($cadenceType, ['daily', 'weekly', 'monthly'], true)) {
+        return ucfirst($cadenceType);
+    }
+
+    $cadenceNumber = max(1, (int) ($goal['cadence_number'] ?? 1));
+    $cadenceUnit = strtolower((string) ($goal['cadence_unit'] ?? 'day'));
+    if (!in_array($cadenceUnit, ['day', 'week', 'month'], true)) {
+        $cadenceUnit = 'day';
+    }
+
+    return $cadenceNumber . ' per ' . $cadenceUnit;
+}
+
+function dashboardGoalStatusLabel(array $goal): string
+{
+    $status = strtolower((string) ($goal['status'] ?? 'active'));
+    if ($status === 'paused') {
+        return 'Paused';
+    }
+
+    return 'Active';
+}
 ?>
 <?php require_once __DIR__ . '/../includes/partials/header.php'; ?>
 
 <section class="zz-dashboard-screen zz-dashboard-stack">
     <section class="zz-hero" aria-labelledby="zz-dashboard-greeting">
-        <p class="zz-hero__eyebrow"><?= h(date('l, F j')) ?></p>
+        <p class="zz-hero__eyebrow"><?= h($nowLocal->format('l, F j')) ?></p>
         <h1 id="zz-dashboard-greeting" class="zz-hero__greeting">Good <?= h($timeOfDay) ?>, <?= h($firstName) ?>.</h1>
         <p class="zz-hero__context"><?= h($contextLine) ?></p>
 
@@ -228,8 +326,26 @@ function h($value): string
         <?php if ($baselineComplete === 1): ?>
             <article class="zz-card zz-score-card" aria-labelledby="zz-dashboard-score-title">
                 <?php if ($hasCheckedInToday && $todayScoreValue !== null): ?>
+                    <?php $todayRing = dashboardScoreRingData((float) $todayScoreValue); ?>
                     <p class="zz-score-card__label" id="zz-dashboard-score-title">Today's ZenScore</p>
-                    <p class="zz-score-card__value"><?= h(number_format((float) $todayScoreValue, 2)) ?></p>
+
+                    <?php if ($todayRing !== null): ?>
+                        <div class="zz-score-ring-wrap">
+                            <div class="zz-score-ring <?= h((string) $todayRing['tone']) ?>" role="img" aria-label="<?= h((string) $todayRing['display']) ?> out of 100">
+                                <svg class="zz-score-ring__svg" viewBox="0 0 100 100" aria-hidden="true">
+                                    <circle class="zz-score-ring__track" cx="50" cy="50" r="42"></circle>
+                                    <circle
+                                        class="zz-score-ring__progress"
+                                        cx="50"
+                                        cy="50"
+                                        r="42"
+                                        stroke-dasharray="<?= h(number_format((float) $todayRing['progress'], 2, '.', '')) ?> <?= h(number_format((float) $todayRing['remaining'], 2, '.', '')) ?>"
+                                    ></circle>
+                                </svg>
+                                <span class="zz-score-ring__value"><?= h((string) $todayRing['display']) ?></span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
                     <?php if ($deltaFromBaseline !== null): ?>
                         <?php
@@ -252,8 +368,27 @@ function h($value): string
                         <p class="zz-score-card__context">Based on your check-ins so far today.</p>
                     <?php endif; ?>
                 <?php else: ?>
+                    <?php $baselineRing = dashboardScoreRingData($baselineScoreForDisplay); ?>
                     <p class="zz-score-card__label" id="zz-dashboard-score-title">Your baseline score</p>
-                    <p class="zz-score-card__value"><?= h(number_format((float) ($baselineScore ?? 0), 2)) ?></p>
+
+                    <?php if ($baselineRing !== null): ?>
+                        <div class="zz-score-ring-wrap">
+                            <div class="zz-score-ring <?= h((string) $baselineRing['tone']) ?>" role="img" aria-label="<?= h((string) $baselineRing['display']) ?> out of 100">
+                                <svg class="zz-score-ring__svg" viewBox="0 0 100 100" aria-hidden="true">
+                                    <circle class="zz-score-ring__track" cx="50" cy="50" r="42"></circle>
+                                    <circle
+                                        class="zz-score-ring__progress"
+                                        cx="50"
+                                        cy="50"
+                                        r="42"
+                                        stroke-dasharray="<?= h(number_format((float) $baselineRing['progress'], 2, '.', '')) ?> <?= h(number_format((float) $baselineRing['remaining'], 2, '.', '')) ?>"
+                                    ></circle>
+                                </svg>
+                                <span class="zz-score-ring__value"><?= h((string) $baselineRing['display']) ?></span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
                     <p class="zz-score-card__context">Your first check-in will generate today's score.</p>
                 <?php endif; ?>
             </article>
@@ -276,6 +411,32 @@ function h($value): string
                 </div>
             </div>
             <p class="zz-goals-snapshot__summary">Completed goals: <?= h((string) $completedGoalsCount) ?></p>
+
+            <div class="zz-goals-snapshot__current">
+                <h3 class="zz-goals-snapshot__subheading">Current goals</h3>
+
+                <?php if (empty($currentGoals)): ?>
+                    <p class="zz-goals-snapshot__empty">No current goals yet.</p>
+                    <a class="zz-btn zz-btn--secondary zz-btn--sm" href="goals/create.php">Create Your First Goal</a>
+                <?php else: ?>
+                    <ul class="zz-goals-snapshot__list">
+                        <?php foreach ($currentGoals as $goal): ?>
+                            <li class="zz-goals-snapshot__goal">
+                                <a class="zz-goals-snapshot__goal-link" href="goals/details.php?id=<?= h((string) ((int) ($goal['id'] ?? 0))) ?>">
+                                    <?= h((string) ($goal['title'] ?? 'Goal')) ?>
+                                </a>
+                                <div class="zz-goals-snapshot__goal-meta">
+                                    <span class="zz-badge zz-badge--sage zz-badge--sm"><?= h(dashboardGoalCadenceLabel($goal)) ?></span>
+                                    <span class="zz-badge zz-badge--neutral zz-badge--sm"><?= h(dashboardGoalStatusLabel($goal)) ?></span>
+                                    <?php if ((int) ($goal['is_priority'] ?? 0) === 1): ?>
+                                        <span class="zz-badge zz-badge--gold zz-badge--sm">Priority</span>
+                                    <?php endif; ?>
+                                </div>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+            </div>
         </article>
     </div>
 
@@ -308,11 +469,6 @@ function h($value): string
             </a>
         </div>
     </article>
-
-    <form method="post" action="<?= h(BASE_URL . '/api/auth/logout.php') ?>" class="zz-dashboard-signout">
-        <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
-        <button type="submit" class="zz-dashboard-signout__button">Sign out</button>
-    </form>
 </section>
 
 <?php require_once __DIR__ . '/../includes/partials/footer.php'; ?>

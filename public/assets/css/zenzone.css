@@ -1356,33 +1356,35 @@ html {
 
 .zz-bottomnav {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.45rem;
   z-index: 29;
   display: flex;
   align-items: stretch;
-  height: 64px;
+  height: 62px;
   background: var(--zz-surface);
-  border-top: 1px solid var(--zz-border);
+  border: 1px solid var(--zz-border);
+  border-radius: 14px;
+  box-shadow: var(--zz-shadow-md);
 }
 
 @supports (padding: max(0px)) {
   .zz-bottomnav {
-    padding-bottom: max(0px, env(safe-area-inset-bottom));
+    bottom: calc(env(safe-area-inset-bottom) + 0.45rem);
   }
 }
 
 .zz-bottomnav__item {
   position: relative;
   flex: 1;
-  min-height: 64px;
+  min-height: 62px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.15rem;
-  padding: 0.35rem 0.25rem;
+  padding: 0.35rem 0.45rem;
   color: var(--zz-muted);
   text-decoration: none;
   transition: color var(--zz-transition);
@@ -1906,6 +1908,19 @@ html {
   display: none;
 }
 
+.zz-body:has(.zz-result-layout) .zz-appbar__mobile-title {
+  width: 30px;
+  height: 30px;
+  max-width: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  background: center / contain no-repeat url('../img/logo.png');
+}
+
 .zz-checkin-layout,
 .zz-result-layout,
 .zz-dashboard-stack {
@@ -2027,6 +2042,64 @@ html {
 .zz-score-card__meta {
   margin: 0;
   font-size: var(--zz-text-sm);
+}
+
+.zz-score-ring-wrap {
+  margin-top: 0.25rem;
+}
+
+.zz-score-ring {
+  position: relative;
+  width: clamp(104px, 24vw, 136px);
+  height: clamp(104px, 24vw, 136px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zz-score-ring__svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.zz-score-ring__track {
+  fill: none;
+  stroke: var(--zz-sage-wash);
+  stroke-width: 11;
+}
+
+.zz-score-ring__progress {
+  fill: none;
+  stroke: var(--zz-sage);
+  stroke-width: 11;
+  stroke-linecap: round;
+  transition: stroke-dasharray 320ms ease, stroke 220ms ease;
+}
+
+.zz-score-ring--high .zz-score-ring__progress {
+  stroke: var(--zz-success);
+}
+
+.zz-score-ring--mid .zz-score-ring__progress {
+  stroke: var(--zz-warning);
+}
+
+.zz-score-ring--low .zz-score-ring__progress {
+  stroke: var(--zz-danger);
+}
+
+.zz-score-ring__value {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--zz-sage-deep);
+  font-family: var(--zz-font-display);
+  font-size: clamp(1.7rem, 5vw, 2.1rem);
+  font-weight: 500;
+  line-height: 1;
 }
 
 .zz-score-card__delta {
@@ -2179,6 +2252,60 @@ html {
   font-size: var(--zz-text-sm);
 }
 
+.zz-goals-snapshot__current {
+  margin-top: 0.95rem;
+  border-top: 1px solid var(--zz-border);
+  padding-top: 0.85rem;
+}
+
+.zz-goals-snapshot__subheading {
+  margin: 0 0 0.55rem;
+  font-family: var(--zz-font-display);
+  font-size: var(--zz-text-lg);
+  font-weight: 500;
+}
+
+.zz-goals-snapshot__empty {
+  margin: 0 0 0.65rem;
+  color: var(--zz-muted);
+  font-size: var(--zz-text-sm);
+}
+
+.zz-goals-snapshot__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.zz-goals-snapshot__goal {
+  border: 1px solid var(--zz-border);
+  border-radius: var(--zz-radius-md);
+  padding: 0.65rem 0.7rem;
+  background: var(--zz-surface);
+}
+
+.zz-goals-snapshot__goal-link {
+  display: inline-block;
+  margin: 0 0 0.45rem;
+  color: var(--zz-ink);
+  font-size: var(--zz-text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.zz-goals-snapshot__goal-link:hover {
+  color: var(--zz-sage-deep);
+  text-decoration: underline;
+}
+
+.zz-goals-snapshot__goal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
 .zz-module-tiles {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2221,24 +2348,6 @@ html {
   box-shadow: var(--zz-shadow-md);
   transform: scale(1.02);
   text-decoration: none;
-}
-
-.zz-dashboard-signout {
-  margin-top: 0.25rem;
-}
-
-.zz-dashboard-signout__button {
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--zz-muted);
-  font-size: var(--zz-text-sm);
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.zz-dashboard-signout__button:hover {
-  color: var(--zz-sage-deep);
 }
 
 @media (min-width: 768px) {

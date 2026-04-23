@@ -28,7 +28,6 @@ if ($checkin === null) {
 
 try {
     $labels = zenzone_labels();
-    $summaryText = zenzone_build_checkin_summary($checkin);
     $recommendationBundle = zenzone_generate_checkin_recommendations($checkin);
 
     $topRecommendation = is_array($recommendationBundle['top_recommendation'] ?? null)
@@ -100,8 +99,44 @@ function checkinTypeLabel(string $checkinType): string
     return $checkinType === 'daily' ? 'Daily' : 'Additional';
 }
 
+function buildStrengthSummary(array $checkin, array $labels): string
+{
+    $ranked = [];
+    foreach ($labels as $field => $label) {
+        $ranked[] = [
+            'field' => $field,
+            'label' => (string) $label,
+            'value' => (int) ($checkin[$field] ?? 0),
+        ];
+    }
+
+    usort($ranked, static function (array $left, array $right): int {
+        $valueCompare = ((int) ($right['value'] ?? 0)) <=> ((int) ($left['value'] ?? 0));
+        if ($valueCompare !== 0) {
+            return $valueCompare;
+        }
+
+        return strcmp((string) ($left['field'] ?? ''), (string) ($right['field'] ?? ''));
+    });
+
+    $topA = $ranked[0] ?? null;
+    $topB = $ranked[1] ?? null;
+    $lowest = $ranked[count($ranked) - 1] ?? null;
+
+    if (!is_array($topA) || !is_array($topB) || !is_array($lowest)) {
+        return 'Check-in saved. Keep building on what is already working for you today.';
+    }
+
+    return 'Your strongest areas today were ' .
+        (string) ($topA['label'] ?? 'one area') . ' and ' .
+        (string) ($topB['label'] ?? 'another area') .
+        '. Keep leaning on those strengths and give a little extra attention to ' .
+        (string) ($lowest['label'] ?? 'your lowest area') . ' next.';
+}
+
 $topStartUrl = recommendationStartUrl($topRecommendation);
 $loggedAt = strtotime((string) ($checkin['created_at'] ?? ''));
+$strengthSummary = buildStrengthSummary($checkin, $labels);
 ?>
 <?php require_once __DIR__ . '/../includes/partials/header.php'; ?>
 
@@ -109,7 +144,7 @@ $loggedAt = strtotime((string) ($checkin['created_at'] ?? ''));
     <article class="zz-card zz-score-card">
         <h2 id="zz-score-title">Today's ZenScore</h2>
         <p class="zz-score-card__value" aria-live="polite" aria-atomic="true"><?= h(number_format((float) $checkin['entry_score'], 2)) ?></p>
-        <p class="zz-score-card__context"><?= h($summaryText) ?></p>
+        <p class="zz-score-card__context"><?= h($strengthSummary) ?></p>
 
         <?php if ($deltaText !== null): ?>
             <span class="zz-score-card__delta <?= h($deltaClass) ?>"><?= h($deltaText) ?></span>
