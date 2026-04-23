@@ -1025,6 +1025,20 @@ html {
   color: var(--zz-ink);
 }
 
+.zz-appbar__mobile-brand {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.zz-appbar__mobile-brand img {
+  display: block;
+  max-height: 30px;
+  width: auto;
+}
+
 .zz-appbar__logo {
   display: none;
   min-height: 44px;
@@ -1043,6 +1057,10 @@ html {
 }
 
 .zz-body--lock-primary-nav .zz-appbar__mobile-title {
+  display: none;
+}
+
+.zz-body--lock-primary-nav .zz-appbar__mobile-brand {
   display: none;
 }
 
@@ -1499,7 +1517,8 @@ html {
   }
 
   .zz-appbar__menu-wrap--nav,
-  .zz-appbar__mobile-title {
+  .zz-appbar__mobile-title,
+  .zz-appbar__mobile-brand {
     display: none;
   }
 
@@ -1921,23 +1940,6 @@ html {
 /* ============ Dashboard + Check-in ============ */
 .zz-body:has(.zz-dashboard-screen) .zz-page-header {
   display: none;
-}
-
-.zz-body:has(.zz-dashboard-screen) .zz-appbar__mobile-title {
-  display: none;
-}
-
-.zz-body:has(.zz-result-layout) .zz-appbar__mobile-title {
-  width: 30px;
-  height: 30px;
-  max-width: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0;
-  line-height: 0;
-  color: transparent;
-  background: center / contain no-repeat url('../img/logo.png');
 }
 
 .zz-ptr {

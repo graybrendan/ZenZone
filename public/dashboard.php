@@ -292,7 +292,7 @@ function dashboardGoalStatusLabel(array $goal): string
         <?php elseif (!$hasCheckedInToday): ?>
             <a class="zz-btn zz-btn--primary zz-btn--lg" href="<?= h(BASE_URL . '/checkin.php') ?>">Check In Now</a>
         <?php else: ?>
-            <a class="zz-btn zz-btn--secondary zz-btn--lg" href="<?= h(BASE_URL . '/checkin.php') ?>">Log Another Check-In</a>
+            <a class="zz-btn zz-btn--primary zz-btn--lg" href="<?= h(BASE_URL . '/coach/index.php') ?>">Talk to Coach</a>
         <?php endif; ?>
     </section>
 

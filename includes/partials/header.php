@@ -198,7 +198,15 @@ if ($zzUserName === '') {
                 </div>
 
                 <div class="zz-appbar__zone zz-appbar__zone--center">
-                    <span class="zz-appbar__mobile-title"><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></span>
+                    <?php if ($lockPrimaryNav): ?>
+                        <span class="zz-appbar__mobile-brand" aria-label="ZenZone">
+                            <img src="<?= BASE_URL ?>/assets/img/logo.png" alt="ZenZone">
+                        </span>
+                    <?php else: ?>
+                        <a class="zz-appbar__mobile-brand" href="<?= htmlspecialchars(BASE_URL . '/dashboard.php', ENT_QUOTES, 'UTF-8') ?>">
+                            <img src="<?= BASE_URL ?>/assets/img/logo.png" alt="ZenZone">
+                        </a>
+                    <?php endif; ?>
                 </div>
 
                 <div class="zz-appbar__zone zz-appbar__zone--right">
