@@ -3846,3 +3846,158 @@ html {
 .zz-lesson-actions .zz-btn {
   min-height: 44px;
 }
+
+/* ============ Trends module ============ */
+.zz-trends-page {
+  display: grid;
+  gap: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.zz-trends-actions {
+  justify-content: flex-end;
+}
+
+.zz-trends-actions .zz-btn {
+  min-height: 44px;
+}
+
+.zz-trends-metrics {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.zz-trends-metric {
+  padding: 1rem 1.1rem;
+}
+
+.zz-trends-metric__label {
+  margin: 0;
+  color: var(--zz-muted);
+  font-size: var(--zz-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.zz-trends-metric__value {
+  margin: 0.35rem 0 0;
+  color: var(--zz-sage-deep);
+  font-family: var(--zz-font-display);
+  font-size: var(--zz-text-2xl);
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.zz-trends-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.zz-trends-range .zz-btn {
+  min-height: 44px;
+}
+
+.zz-trends-empty {
+  text-align: center;
+}
+
+.zz-trends-chart-card {
+  min-height: 340px;
+}
+
+.zz-trends-card-title {
+  margin: 0 0 0.5rem;
+  font-family: var(--zz-font-display);
+  font-size: var(--zz-text-xl);
+  font-weight: 500;
+}
+
+.zz-trends-chart-note {
+  margin-top: -0.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.zz-trends-chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 290px;
+  min-height: 230px;
+}
+
+.zz-trends-chart-fallback {
+  margin-top: 0.75rem;
+}
+
+.zz-trends-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.zz-trends-table {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: collapse;
+}
+
+.zz-trends-table th,
+.zz-trends-table td {
+  padding: 0.6rem 0.55rem;
+  border-bottom: 1px solid var(--zz-border);
+  text-align: left;
+  font-size: var(--zz-text-sm);
+  white-space: nowrap;
+}
+
+.zz-trends-table thead th {
+  color: var(--zz-muted);
+  font-size: var(--zz-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.zz-trends-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.zz-trends-table tbody tr:nth-child(even) {
+  background: rgba(232, 237, 228, 0.28);
+}
+
+@media (min-width: 600px) {
+  .zz-trends-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .zz-trends-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 599px) {
+  .zz-trends-actions {
+    justify-content: flex-start;
+  }
+
+  .zz-trends-actions .zz-btn {
+    flex: 1 1 100%;
+  }
+
+  .zz-trends-range .zz-btn {
+    flex: 1 1 calc(33.333% - 0.35rem);
+  }
+
+  .zz-trends-chart-wrap {
+    height: 240px;
+  }
+
+  .zz-trends-table {
+    min-width: 30rem;
+  }
+}

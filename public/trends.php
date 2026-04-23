@@ -53,151 +53,116 @@ function metricValue($value, int $precision = 2): string
 
 function rangeButtonClass(string $selectedRange, string $buttonRange): string
 {
-    return $selectedRange === $buttonRange ? 'btn-dark' : 'btn-outline-dark';
+    return $selectedRange === $buttonRange
+        ? 'zz-btn zz-btn--primary zz-btn--sm'
+        : 'zz-btn zz-btn--secondary zz-btn--sm';
 }
+
+$pageTitle = 'ZenScore Trends';
+$pageEyebrow = 'Insights';
+$pageHelper = 'Track your patterns over time and adjust your next action.';
+$activeNav = 'checkin';
+$showBackButton = true;
+$backHref = $backToResultUrl !== null
+    ? BASE_URL . '/' . ltrim($backToResultUrl, '/')
+    : BASE_URL . '/dashboard.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trends - ZenZone</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .chart-card {
-            min-height: 360px;
-        }
+<?php require_once __DIR__ . '/../includes/partials/header.php'; ?>
 
-        .chart-wrap {
-            position: relative;
-            height: 290px;
-        }
-    </style>
-</head>
-<body class="bg-light">
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-                <div>
-                    <h1 class="h3 mb-0">ZenScore Trends</h1>
-                    <p class="text-muted mb-0">Track your patterns over time and adjust your next action.</p>
-                </div>
-                <div class="d-flex gap-2">
-                    <a href="dashboard.php" class="btn btn-outline-secondary">Back to Dashboard</a>
-                    <?php if ($backToResultUrl !== null): ?>
-                        <a href="<?= h($backToResultUrl) ?>" class="btn btn-outline-dark">Back to Latest Result</a>
-                    <?php endif; ?>
-                </div>
-            </div>
+<section class="zz-trends-page" aria-labelledby="zz-trends-page-title">
+    <h2 id="zz-trends-page-title" class="zz-visually-hidden">ZenScore trends</h2>
 
-            <div class="row g-3 mb-3">
-                <div class="col-sm-6 col-lg-3">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <div class="text-muted small">Latest ZenScore</div>
-                            <div class="fs-4 fw-bold"><?= h(metricValue($overview['latest_zenscore'] ?? null)) ?></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <div class="text-muted small">Average ZenScore</div>
-                            <div class="fs-4 fw-bold"><?= h(metricValue($overview['average_zenscore'] ?? null)) ?></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <div class="text-muted small">Total Check-Ins</div>
-                            <div class="fs-4 fw-bold"><?= h((string) ($overview['total_checkins'] ?? 0)) ?></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <div class="text-muted small">Days Active</div>
-                            <div class="fs-4 fw-bold"><?= h((string) ($overview['active_days'] ?? 0)) ?></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <div class="btn-group" role="group" aria-label="Trend range filter">
-                    <a href="trends.php?range=7d<?= $resultId > 0 ? '&result_id=' . (int) $resultId : '' ?>" class="btn <?= h(rangeButtonClass($selectedRange, '7d')) ?>">7d</a>
-                    <a href="trends.php?range=30d<?= $resultId > 0 ? '&result_id=' . (int) $resultId : '' ?>" class="btn <?= h(rangeButtonClass($selectedRange, '30d')) ?>">30d</a>
-                    <a href="trends.php?range=all<?= $resultId > 0 ? '&result_id=' . (int) $resultId : '' ?>" class="btn <?= h(rangeButtonClass($selectedRange, 'all')) ?>">All Time</a>
-                </div>
-            </div>
-
-            <?php if (empty($trendPoints)): ?>
-                <div class="card">
-                    <div class="card-body">
-                        <p class="mb-3">No trend data yet. Complete more check-ins to see your patterns.</p>
-                        <a href="checkin.php" class="btn btn-dark">Complete a Check-In</a>
-                    </div>
-                </div>
-            <?php else: ?>
-                <div class="card chart-card mb-3">
-                    <div class="card-body">
-                        <h2 class="h5">ZenScore Over Time</h2>
-                        <div class="chart-wrap">
-                            <canvas id="zenscoreChart"></canvas>
-                        </div>
-                        <p id="zenscoreChartFallback" class="text-muted mt-2 d-none">Chart unavailable right now. Refresh to try again.</p>
-                    </div>
-                </div>
-
-                <div class="card chart-card mb-3">
-                    <div class="card-body">
-                        <h2 class="h5">Stress and Key Dimensions (1-7)</h2>
-                        <p class="text-muted small mb-2">Stress is shown as a proxy from emotional balance. Focus uses readiness.</p>
-                        <div class="chart-wrap">
-                            <canvas id="dimensionChart"></canvas>
-                        </div>
-                        <p id="dimensionChartFallback" class="text-muted mt-2 d-none">Chart unavailable right now. Refresh to try again.</p>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-body">
-                        <h2 class="h5">Recent Points</h2>
-                        <div class="table-responsive">
-                            <table class="table table-sm align-middle">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>ZenScore</th>
-                                        <th>Confidence</th>
-                                        <th>Recovery</th>
-                                        <th>Focus</th>
-                                        <th>Stress</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($recentPoints as $point): ?>
-                                        <tr>
-                                            <td><?= h((string) ($point['date'] ?? '')) ?></td>
-                                            <td><?= h(number_format((float) ($point['zenscore'] ?? 0), 2)) ?></td>
-                                            <td><?= h(number_format((float) ($point['confidence'] ?? 0), 2)) ?></td>
-                                            <td><?= h(number_format((float) ($point['recovery'] ?? 0), 2)) ?></td>
-                                            <td><?= h(number_format((float) ($point['focus'] ?? 0), 2)) ?></td>
-                                            <td><?= h(number_format((float) ($point['stress'] ?? 0), 2)) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
-        </div>
+    <div class="zz-action-row zz-trends-actions">
+        <a href="dashboard.php" class="zz-btn zz-btn--secondary">Back to Dashboard</a>
+        <?php if ($backToResultUrl !== null): ?>
+            <a href="<?= h($backToResultUrl) ?>" class="zz-btn zz-btn--ghost">Back to Latest Result</a>
+        <?php endif; ?>
     </div>
-</div>
+
+    <div class="zz-trends-metrics" role="list" aria-label="Trend overview metrics">
+        <article class="zz-card zz-trends-metric" role="listitem">
+            <p class="zz-trends-metric__label">Latest ZenScore</p>
+            <p class="zz-trends-metric__value"><?= h(metricValue($overview['latest_zenscore'] ?? null)) ?></p>
+        </article>
+        <article class="zz-card zz-trends-metric" role="listitem">
+            <p class="zz-trends-metric__label">Average ZenScore</p>
+            <p class="zz-trends-metric__value"><?= h(metricValue($overview['average_zenscore'] ?? null)) ?></p>
+        </article>
+        <article class="zz-card zz-trends-metric" role="listitem">
+            <p class="zz-trends-metric__label">Total Check-Ins</p>
+            <p class="zz-trends-metric__value"><?= h((string) ($overview['total_checkins'] ?? 0)) ?></p>
+        </article>
+        <article class="zz-card zz-trends-metric" role="listitem">
+            <p class="zz-trends-metric__label">Days Active</p>
+            <p class="zz-trends-metric__value"><?= h((string) ($overview['active_days'] ?? 0)) ?></p>
+        </article>
+    </div>
+
+    <nav class="zz-trends-range" aria-label="Trend range filter">
+        <a href="trends.php?range=7d<?= $resultId > 0 ? '&result_id=' . (int) $resultId : '' ?>" class="<?= h(rangeButtonClass($selectedRange, '7d')) ?>" <?= $selectedRange === '7d' ? 'aria-current="page"' : '' ?>>7d</a>
+        <a href="trends.php?range=30d<?= $resultId > 0 ? '&result_id=' . (int) $resultId : '' ?>" class="<?= h(rangeButtonClass($selectedRange, '30d')) ?>" <?= $selectedRange === '30d' ? 'aria-current="page"' : '' ?>>30d</a>
+        <a href="trends.php?range=all<?= $resultId > 0 ? '&result_id=' . (int) $resultId : '' ?>" class="<?= h(rangeButtonClass($selectedRange, 'all')) ?>" <?= $selectedRange === 'all' ? 'aria-current="page"' : '' ?>>All Time</a>
+    </nav>
+
+    <?php if (empty($trendPoints)): ?>
+        <article class="zz-card zz-empty-state zz-trends-empty">
+            <svg class="zz-empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 12h18"></path>
+                <path d="M7 16l3-4 3 2 4-6"></path>
+            </svg>
+            <h2>No trend data yet</h2>
+            <p>Complete more check-ins to see your patterns over time.</p>
+            <a href="checkin.php" class="zz-btn zz-btn--primary">Complete a Check-In</a>
+        </article>
+    <?php else: ?>
+        <article class="zz-card zz-trends-chart-card">
+            <h2 class="zz-trends-card-title">ZenScore Over Time</h2>
+            <div class="zz-trends-chart-wrap">
+                <canvas id="zenscoreChart" role="img" aria-label="ZenScore over time line chart"></canvas>
+            </div>
+            <p id="zenscoreChartFallback" class="zz-help zz-trends-chart-fallback" hidden>Chart unavailable right now. Refresh to try again.</p>
+        </article>
+
+        <article class="zz-card zz-trends-chart-card">
+            <h2 class="zz-trends-card-title">Stress and Key Dimensions (1-7)</h2>
+            <p class="zz-help zz-trends-chart-note">Stress is shown as a proxy from emotional balance. Focus uses readiness.</p>
+            <div class="zz-trends-chart-wrap">
+                <canvas id="dimensionChart" role="img" aria-label="Stress and key dimensions over time line chart"></canvas>
+            </div>
+            <p id="dimensionChartFallback" class="zz-help zz-trends-chart-fallback" hidden>Chart unavailable right now. Refresh to try again.</p>
+        </article>
+
+        <article class="zz-card zz-trends-table-card">
+            <h2 class="zz-trends-card-title">Recent Points</h2>
+            <div class="zz-trends-table-wrap">
+                <table class="zz-trends-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Date</th>
+                            <th scope="col">ZenScore</th>
+                            <th scope="col">Confidence</th>
+                            <th scope="col">Recovery</th>
+                            <th scope="col">Focus</th>
+                            <th scope="col">Stress</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($recentPoints as $point): ?>
+                            <tr>
+                                <td><?= h((string) ($point['date'] ?? '')) ?></td>
+                                <td><?= h(number_format((float) ($point['zenscore'] ?? 0), 2)) ?></td>
+                                <td><?= h(number_format((float) ($point['confidence'] ?? 0), 2)) ?></td>
+                                <td><?= h(number_format((float) ($point['recovery'] ?? 0), 2)) ?></td>
+                                <td><?= h(number_format((float) ($point['focus'] ?? 0), 2)) ?></td>
+                                <td><?= h(number_format((float) ($point['stress'] ?? 0), 2)) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    <?php endif; ?>
+</section>
 
 <?php if (!empty($trendPoints)): ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
@@ -210,9 +175,18 @@ function rangeButtonClass(string $selectedRange, string $buttonRange): string
     const focusSeries = <?= json_encode($focusSeries, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     const stressSeries = <?= json_encode($stressSeries, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
 
+    const zenscoreFallback = document.getElementById('zenscoreChartFallback');
+    const dimensionFallback = document.getElementById('dimensionChartFallback');
+
     if (!window.Chart) {
-        document.getElementById('zenscoreChartFallback').classList.remove('d-none');
-        document.getElementById('dimensionChartFallback').classList.remove('d-none');
+        if (zenscoreFallback) {
+            zenscoreFallback.removeAttribute('hidden');
+        }
+
+        if (dimensionFallback) {
+            dimensionFallback.removeAttribute('hidden');
+        }
+
         return;
     }
 
@@ -222,15 +196,17 @@ function rangeButtonClass(string $selectedRange, string $buttonRange): string
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'ZenScore',
-                    data: zenscoreSeries,
-                    borderColor: '#1f2937',
-                    backgroundColor: 'rgba(31, 41, 55, 0.12)',
-                    tension: 0.25,
-                    fill: true,
-                    pointRadius: 3
-                }]
+                datasets: [
+                    {
+                        label: 'ZenScore',
+                        data: zenscoreSeries,
+                        borderColor: '#5B7A59',
+                        backgroundColor: 'rgba(122, 155, 118, 0.18)',
+                        tension: 0.25,
+                        fill: true,
+                        pointRadius: 3
+                    }
+                ]
             },
             options: {
                 responsive: true,
@@ -258,32 +234,32 @@ function rangeButtonClass(string $selectedRange, string $buttonRange): string
                     {
                         label: 'Stress (proxy)',
                         data: stressSeries,
-                        borderColor: '#b91c1c',
-                        backgroundColor: 'rgba(185, 28, 28, 0.08)',
+                        borderColor: '#B5553F',
+                        backgroundColor: 'rgba(181, 85, 63, 0.10)',
                         tension: 0.2,
                         pointRadius: 2
                     },
                     {
                         label: 'Focus',
                         data: focusSeries,
-                        borderColor: '#1d4ed8',
-                        backgroundColor: 'rgba(29, 78, 216, 0.08)',
+                        borderColor: '#3A5E98',
+                        backgroundColor: 'rgba(58, 94, 152, 0.10)',
                         tension: 0.2,
                         pointRadius: 2
                     },
                     {
                         label: 'Confidence',
                         data: confidenceSeries,
-                        borderColor: '#0f766e',
-                        backgroundColor: 'rgba(15, 118, 110, 0.08)',
+                        borderColor: '#5B7A59',
+                        backgroundColor: 'rgba(91, 122, 89, 0.10)',
                         tension: 0.2,
                         pointRadius: 2
                     },
                     {
                         label: 'Recovery',
                         data: recoverySeries,
-                        borderColor: '#7c3aed',
-                        backgroundColor: 'rgba(124, 58, 237, 0.08)',
+                        borderColor: '#8C6EA3',
+                        backgroundColor: 'rgba(140, 110, 163, 0.10)',
                         tension: 0.2,
                         pointRadius: 2
                     }
@@ -307,5 +283,5 @@ function rangeButtonClass(string $selectedRange, string $buttonRange): string
 })();
 </script>
 <?php endif; ?>
-</body>
-</html>
+
+<?php require_once __DIR__ . '/../includes/partials/footer.php'; ?>
