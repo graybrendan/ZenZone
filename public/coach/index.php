@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/coach_engine.php';
 require_once __DIR__ . '/../../includes/validation.php';
 require_once __DIR__ . '/../../includes/date_helpers.php';
+require_once __DIR__ . '/../../includes/coach_view_helpers.php';
 
 requireLogin();
 
@@ -44,6 +45,7 @@ if (!isValidScaleRating((int) $formData['stress_level'], 1, 5)) {
 
 $recentSituations = [];
 $totalSituations = 0;
+$activeGoals = [];
 
 if ($coachStorageReady) {
     $countStmt = $db->prepare("
@@ -70,6 +72,17 @@ if ($coachStorageReady) {
     ");
     $listStmt->execute(['user_id' => $userId]);
     $recentSituations = $listStmt->fetchAll();
+
+    $activeGoalsStmt = $db->prepare("
+        SELECT id, title, cadence_type, category
+        FROM goals
+        WHERE user_id = :user_id
+          AND status = 'active'
+        ORDER BY is_priority DESC, updated_at DESC
+        LIMIT 3
+    ");
+    $activeGoalsStmt->execute(['user_id' => $userId]);
+    $activeGoals = $activeGoalsStmt->fetchAll();
 }
 
 $pageTitle = 'Coach';
@@ -77,25 +90,6 @@ $pageEyebrow = 'Mental Performance';
 $pageHelper = 'Describe the moment and get one clear next action.';
 $activeNav = 'coach';
 $showBackButton = false;
-
-function h($value): string
-{
-    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-}
-
-function coachTypeLabel(string $type): string
-{
-    $normalized = strtolower(trim($type));
-    $normalized = str_replace(['_', '-', '/'], ' ', $normalized);
-    $normalized = preg_replace('/\s+/', ' ', $normalized);
-    $normalized = is_string($normalized) ? trim($normalized) : '';
-
-    if ($normalized === '') {
-        return 'Other';
-    }
-
-    return ucwords($normalized);
-}
 ?>
 <?php require_once __DIR__ . '/../../includes/partials/header.php'; ?>
 
@@ -115,6 +109,17 @@ function coachTypeLabel(string $type): string
             </p>
         </article>
     <?php else: ?>
+        <article class="zz-card zz-intro-card zz-coach-intro-card">
+            <p class="zz-section-title zz-intro-card__eyebrow">How the Coach Works</p>
+            <h2>Describe a moment. Get one clear action.</h2>
+            <p>A <strong>situation</strong> is anything on your mind right now - pre-game nerves, a rough practice, losing focus, a confidence dip, or just needing a reset. Describe what's happening, and the Coach will give you one grounded next step you can use in minutes.</p>
+            <div class="zz-intro-card__badges">
+                <span class="zz-badge zz-badge--sage zz-badge--sm">Takes 30 seconds</span>
+                <span class="zz-badge zz-badge--sage zz-badge--sm">Private to you</span>
+                <span class="zz-badge zz-badge--sage zz-badge--sm">One clear action</span>
+            </div>
+        </article>
+
         <article class="zz-card zz-coach-start" aria-labelledby="zz-coach-start-title">
             <div class="zz-coach-card-head">
                 <h3 id="zz-coach-start-title" class="zz-coach-card-title">Start New Situation</h3>
@@ -126,71 +131,147 @@ function coachTypeLabel(string $type): string
                 <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
 
                 <div class="zz-field">
-                    <label for="situation_text" class="zz-label">What happened?</label>
+                    <label for="situation_text" class="zz-label">What's happening right now?</label>
+                    <p class="zz-help">A sentence or two is enough. The Coach works with whatever you give it.</p>
+                    <div class="zz-chip-group zz-chips" data-chip-target="#situation_text">
+                        <button type="button" class="zz-chip" data-value="Before a big game" aria-pressed="false">Before a big game</button>
+                        <button type="button" class="zz-chip" data-value="After a mistake" aria-pressed="false">After a mistake</button>
+                        <button type="button" class="zz-chip" data-value="Feeling unmotivated" aria-pressed="false">Feeling unmotivated</button>
+                        <button type="button" class="zz-chip" data-value="Intense pressure" aria-pressed="false">Intense pressure</button>
+                        <button type="button" class="zz-chip" data-value="Losing confidence" aria-pressed="false">Losing confidence</button>
+                        <button type="button" class="zz-chip" data-value="Team conflict" aria-pressed="false">Team conflict</button>
+                    </div>
                     <textarea
                         id="situation_text"
                         name="situation_text"
                         class="zz-textarea zz-textarea--journal"
-                        rows="5"
+                        rows="4"
+                        placeholder="I have a big match tomorrow and I can't stop overthinking my last performance..."
+                        minlength="8"
                         maxlength="1200"
                         required
                     ><?= h($formData['situation_text']) ?></textarea>
-                    <p class="zz-help">Share enough detail so the recommendation fits your moment.</p>
-                </div>
-
-                <div class="zz-coach-form__grid">
-                    <div class="zz-field">
-                        <label for="situation_type" class="zz-label">Situation type</label>
-                        <select id="situation_type" name="situation_type" class="zz-select" required>
-                            <?php foreach (getCoachSituationTypes() as $type): ?>
-                                <option value="<?= h($type) ?>" <?= $formData['situation_type'] === $type ? 'selected' : '' ?>>
-                                    <?= h(coachTypeLabel((string) $type)) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="zz-field">
-                        <label for="time_available" class="zz-label">Time available</label>
-                        <select id="time_available" name="time_available" class="zz-select" required>
-                            <?php foreach (getCoachTimeOptions() as $minutes): ?>
-                                <option value="<?= (int) $minutes ?>" <?= ((int) $formData['time_available'] === (int) $minutes) ? 'selected' : '' ?>>
-                                    <?= (int) $minutes ?> min
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="zz-field">
-                        <label for="stress_level" class="zz-label">What emotions did you experience?</label>
-                        <select id="stress_level" name="stress_level" class="zz-select" required>
-                            <option value="1" <?= ((int) $formData['stress_level'] === 1) ? 'selected' : '' ?>>Calm / Grounded</option>
-                            <option value="2" <?= ((int) $formData['stress_level'] === 2) ? 'selected' : '' ?>>Slightly tense</option>
-                            <option value="3" <?= ((int) $formData['stress_level'] === 3) ? 'selected' : '' ?>>Frustrated / Distracted</option>
-                            <option value="4" <?= ((int) $formData['stress_level'] === 4) ? 'selected' : '' ?>>Anxious / Overwhelmed</option>
-                            <option value="5" <?= ((int) $formData['stress_level'] === 5) ? 'selected' : '' ?>>Panicked / Angry</option>
-                        </select>
-                        <p class="zz-help">Naming your emotion in the moment is the first step to awareness. Choose the closest fit.</p>
-                    </div>
                 </div>
 
                 <div class="zz-field">
-                    <div class="zz-field__header">
-                        <label for="upcoming_event" class="zz-label">Upcoming event</label>
-                        <span class="zz-optional-tag">Optional</span>
+                    <p class="zz-label">What kind of moment is this?</p>
+                    <p class="zz-help">Pick the closest match - this helps the Coach focus its recommendation.</p>
+                    <div class="zz-card-radio-group">
+                        <label class="zz-card-radio">
+                            <input type="radio" name="situation_type" value="pre-performance nerves" <?= $formData['situation_type'] === 'pre-performance nerves' ? 'checked' : '' ?>>
+                            <span class="zz-card-radio__body">
+                                <strong>Pre-performance nerves</strong>
+                                <span class="zz-help">Anxiety before a game, event, or big moment</span>
+                            </span>
+                        </label>
+                        <label class="zz-card-radio">
+                            <input type="radio" name="situation_type" value="after mistake" <?= $formData['situation_type'] === 'after mistake' ? 'checked' : '' ?>>
+                            <span class="zz-card-radio__body">
+                                <strong>After a mistake</strong>
+                                <span class="zz-help">Replaying an error, struggling to move on</span>
+                            </span>
+                        </label>
+                        <label class="zz-card-radio">
+                            <input type="radio" name="situation_type" value="low focus" <?= $formData['situation_type'] === 'low focus' ? 'checked' : '' ?>>
+                            <span class="zz-card-radio__body">
+                                <strong>Low focus</strong>
+                                <span class="zz-help">Distracted, scattered, can't lock in</span>
+                            </span>
+                        </label>
+                        <label class="zz-card-radio">
+                            <input type="radio" name="situation_type" value="frustration / anger" <?= $formData['situation_type'] === 'frustration / anger' ? 'checked' : '' ?>>
+                            <span class="zz-card-radio__body">
+                                <strong>Frustration / anger</strong>
+                                <span class="zz-help">Heated, reactive, need to cool down</span>
+                            </span>
+                        </label>
+                        <label class="zz-card-radio">
+                            <input type="radio" name="situation_type" value="confidence dip" <?= $formData['situation_type'] === 'confidence dip' ? 'checked' : '' ?>>
+                            <span class="zz-card-radio__body">
+                                <strong>Confidence dip</strong>
+                                <span class="zz-help">Doubting yourself or your ability</span>
+                            </span>
+                        </label>
+                        <label class="zz-card-radio">
+                            <input type="radio" name="situation_type" value="post-practice reset" <?= $formData['situation_type'] === 'post-practice reset' ? 'checked' : '' ?>>
+                            <span class="zz-card-radio__body">
+                                <strong>Post-practice reset</strong>
+                                <span class="zz-help">Winding down after training or competition</span>
+                            </span>
+                        </label>
+                        <label class="zz-card-radio">
+                            <input type="radio" name="situation_type" value="other" <?= $formData['situation_type'] === 'other' ? 'checked' : '' ?>>
+                            <span class="zz-card-radio__body">
+                                <strong>Other</strong>
+                                <span class="zz-help">Something else that doesn't fit above</span>
+                            </span>
+                        </label>
                     </div>
-                    <input
-                        id="upcoming_event"
-                        name="upcoming_event"
-                        type="text"
-                        maxlength="120"
-                        class="zz-input"
-                        value="<?= h($formData['upcoming_event']) ?>"
-                    >
                 </div>
 
+                <fieldset class="zz-scale" data-scale-name="stress_level" data-scale-min="1" data-scale-max="5">
+                    <legend class="zz-label zz-scale__legend">Emotion intensity</legend>
+                    <p class="zz-help zz-scale__description">How strong is what you're feeling right now? Not good or bad - just intensity.</p>
+                    <div class="zz-scale__track" role="radiogroup" aria-label="Emotion intensity 1 to 5">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                            <?php $isSelected = ((int) $formData['stress_level'] === $i); ?>
+                            <label class="zz-scale__pill<?= $isSelected ? ' is-selected' : '' ?>">
+                                <input type="radio" name="stress_level" value="<?= h((string) $i) ?>" <?= $isSelected ? 'checked' : '' ?>>
+                                <span class="zz-scale__num"><?= h((string) $i) ?></span>
+                            </label>
+                        <?php endfor; ?>
+                    </div>
+                    <div class="zz-scale__endpoints">
+                        <span class="zz-scale__endpoint-word">Calm</span>
+                        <span class="zz-scale__endpoint-word">Overwhelmed</span>
+                    </div>
+                </fieldset>
+
+                <div class="zz-field">
+                    <p class="zz-label">How much time do you have?</p>
+                    <div class="zz-time-pills">
+                        <label class="zz-time-pill">
+                            <input type="radio" name="time_available" value="1" <?= (int) $formData['time_available'] === 1 ? 'checked' : '' ?>>
+                            <span>1 min</span>
+                        </label>
+                        <label class="zz-time-pill">
+                            <input type="radio" name="time_available" value="3" <?= (int) $formData['time_available'] === 3 ? 'checked' : '' ?>>
+                            <span>3 min</span>
+                        </label>
+                        <label class="zz-time-pill">
+                            <input type="radio" name="time_available" value="5" <?= (int) $formData['time_available'] === 5 ? 'checked' : '' ?>>
+                            <span>5 min</span>
+                        </label>
+                        <label class="zz-time-pill">
+                            <input type="radio" name="time_available" value="10" <?= (int) $formData['time_available'] === 10 ? 'checked' : '' ?>>
+                            <span>10 min</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="zz-field zz-float" data-zz-float>
+                    <input type="text" id="upcoming_event" name="upcoming_event" class="zz-float__control" placeholder=" " maxlength="120" value="<?= h($formData['upcoming_event']) ?>">
+                    <label class="zz-float__label" for="upcoming_event">Upcoming event <span class="zz-optional-tag">Optional</span></label>
+                    <p class="zz-help">If something specific is coming up, name it - helps the Coach tailor the recommendation.</p>
+                </div>
+
+                <?php if (!empty($activeGoals)): ?>
+                    <article class="zz-card zz-coach-goals-reminder">
+                        <p class="zz-section-title">Your Active Goals</p>
+                        <p class="zz-help">The Coach considers these when building your recommendation.</p>
+                        <ul class="zz-coach-goals-list">
+                            <?php foreach ($activeGoals as $g): ?>
+                                <li>
+                                    <a href="<?= h(BASE_URL . '/goals/details.php?id=' . (int) ($g['id'] ?? 0)) ?>"><?= h((string) ($g['title'] ?? 'Goal')) ?></a>
+                                    <span class="zz-badge zz-badge--neutral zz-badge--sm"><?= h(ucfirst((string) ($g['cadence_type'] ?? ''))) ?></span>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </article>
+                <?php endif; ?>
+
                 <div class="zz-coach-form__actions">
-                    <button type="submit" class="zz-btn zz-btn--primary">Get Coach Recommendation</button>
+                    <button type="submit" class="zz-btn zz-btn--primary zz-btn--lg zz-btn--block">Get My Recommendation</button>
                 </div>
             </form>
         </article>

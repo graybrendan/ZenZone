@@ -3282,3 +3282,303 @@ html {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* ============ Coach module refinements ============ */
+.zz-coach-intro-card {
+  border: 1px solid var(--zz-border);
+  border-radius: var(--zz-radius-lg);
+  padding: 2rem;
+  background: linear-gradient(135deg, var(--zz-surface) 0%, var(--zz-sage-wash) 100%);
+  box-shadow: var(--zz-shadow-md);
+  margin-bottom: 2rem;
+}
+
+.zz-coach-form .zz-chip-group {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.zz-card-radio-group {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.zz-card-radio {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--zz-border);
+  border-radius: var(--zz-radius-md);
+  background: var(--zz-surface);
+  cursor: pointer;
+  transition: background var(--zz-transition), border-color var(--zz-transition);
+}
+
+.zz-card-radio input[type='radio'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.zz-card-radio:has(input:checked),
+.zz-card-radio.is-selected {
+  background: var(--zz-sage-wash);
+  border-color: var(--zz-sage);
+  border-left: 3px solid var(--zz-sage);
+}
+
+.zz-card-radio:hover {
+  background: var(--zz-sage-wash);
+}
+
+.zz-card-radio__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.zz-card-radio__body strong {
+  font-size: var(--zz-text-base);
+  color: var(--zz-ink);
+}
+
+.zz-card-radio__body .zz-help {
+  margin: 0;
+  font-size: var(--zz-text-sm);
+}
+
+.zz-time-pills {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.zz-time-pill {
+  position: relative;
+  cursor: pointer;
+}
+
+.zz-time-pill input[type='radio'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.zz-time-pill span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--zz-border-strong);
+  border-radius: var(--zz-radius-pill);
+  font-size: var(--zz-text-sm);
+  font-weight: 500;
+  color: var(--zz-ink-soft);
+  transition: all var(--zz-transition);
+}
+
+.zz-time-pill:has(input:checked) span,
+.zz-time-pill.is-selected span {
+  background: var(--zz-sage);
+  border-color: var(--zz-sage);
+  color: #ffffff;
+}
+
+.zz-time-pill:hover span {
+  border-color: var(--zz-sage);
+  color: var(--zz-sage-deep);
+}
+
+.zz-coach-thread {
+  border-left: 4px solid var(--zz-sage);
+}
+
+.zz-coach-rec-primary {
+  border: 1px solid var(--zz-sage-wash-strong);
+  border-radius: var(--zz-radius-md);
+  background: linear-gradient(180deg, var(--zz-sage-wash), #f3f6ef);
+  padding: 1rem;
+}
+
+.zz-coach-rec-primary__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.zz-coach-rec-primary h4 {
+  font-family: var(--zz-font-display);
+  font-size: var(--zz-text-xl);
+  font-weight: 500;
+  margin: 0;
+}
+
+.zz-coach-rec-label {
+  color: var(--zz-sage-deep);
+  font-weight: 600;
+}
+
+.zz-coach-rec-steps {
+  counter-reset: coach-step;
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+.zz-coach-rec-steps li {
+  counter-increment: coach-step;
+  position: relative;
+  padding-left: 2.25rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.zz-coach-rec-steps li::before {
+  content: counter(coach-step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--zz-sage-wash);
+  color: var(--zz-sage-deep);
+  font-size: var(--zz-text-sm);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zz-coach-alt-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.zz-coach-alt-item {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 0 0.95rem;
+  border-bottom: 1px solid var(--zz-border);
+}
+
+.zz-coach-alt-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.zz-coach-alt-item h4 {
+  font-family: var(--zz-font-display);
+  font-size: var(--zz-text-lg);
+  margin: 0 0 0.35rem;
+}
+
+.zz-coach-goals-reminder {
+  background: var(--zz-gold-light);
+  border-color: var(--zz-gold);
+}
+
+.zz-coach-goals-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+}
+
+.zz-coach-goals-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--zz-border);
+}
+
+.zz-coach-goals-list li:last-child {
+  border-bottom: none;
+}
+
+.zz-coach-goals-list a {
+  color: var(--zz-sage-deep);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.zz-coach-goals-list a:hover {
+  text-decoration: underline;
+}
+
+.zz-coach-outcome {
+  border-color: var(--zz-sage-wash-strong);
+}
+
+.zz-coach-outcome .zz-help {
+  margin-top: 0.45rem;
+}
+
+.zz-coach-outcome-form .zz-btn {
+  min-height: 44px;
+}
+
+.zz-coach-outcome--logged .zz-help {
+  margin: 0;
+}
+
+.zz-outcome-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.zz-coach-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 1.5rem 0;
+}
+
+.zz-coach-history-item {
+  border-left: 4px solid var(--zz-border-strong);
+}
+
+.zz-coach-history-item.is-recent {
+  border-left-color: var(--zz-sage);
+}
+
+.zz-coach-history-item.is-older {
+  border-left-color: var(--zz-border-strong);
+}
+
+.zz-coach-item__title--clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+@media (max-width: 600px) {
+  .zz-coach-intro-card {
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .zz-outcome-buttons .zz-btn {
+    flex: 1 1 8.5rem;
+  }
+}

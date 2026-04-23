@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/coach_engine.php';
 require_once __DIR__ . '/../../includes/date_helpers.php';
+require_once __DIR__ . '/../../includes/coach_view_helpers.php';
 
 requireLogin();
 
@@ -44,6 +45,7 @@ if ($totalRows > 0) {
         SELECT
             id,
             COALESCE(NULLIF(summary, ''), thread_title) AS summary,
+            situation_type,
             created_at,
             updated_at,
             last_message_at
@@ -63,11 +65,6 @@ $pageHelper = 'Review past situations and revisit recommendations.';
 $activeNav = 'coach';
 $showBackButton = true;
 $backHref = BASE_URL . '/coach/index.php';
-
-function h($value): string
-{
-    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-}
 ?>
 <?php require_once __DIR__ . '/../../includes/partials/header.php'; ?>
 
@@ -80,13 +77,13 @@ function h($value): string
     </article>
 
     <?php if (empty($rows)): ?>
-        <article class="zz-card zz-coach-empty">
-            <svg class="zz-coach-empty__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H10l-5 4V7a2 2 0 0 1 2-2z"></path>
-                <path d="M9 10h6"></path>
-                <path d="M9 13h4"></path>
+        <article class="zz-card zz-empty-state zz-coach-empty-state">
+            <svg class="zz-empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="8"></circle>
+                <circle cx="12" cy="12" r="4"></circle>
+                <circle cx="12" cy="12" r="1"></circle>
             </svg>
-            <h3>No coach situations yet</h3>
+            <h2>No coach situations yet</h2>
             <p>Start your first one to build a history of recommendations.</p>
             <a class="zz-btn zz-btn--primary" href="<?= h(BASE_URL . '/coach/index.php') ?>">Start New Situation</a>
         </article>
@@ -96,12 +93,21 @@ function h($value): string
                 <?php
                 $threadId = (int) ($row['id'] ?? 0);
                 $summary = createCoachSituationSummary((string) ($row['summary'] ?? ''), 170);
+                $situationType = trim((string) ($row['situation_type'] ?? ''));
+                $situationTypeLabel = trim((string) preg_replace('/\s+/', ' ', str_replace(['_', '-', '/'], ' ', strtolower($situationType))));
                 $createdAt = (string) ($row['created_at'] ?? '');
                 $updatedAt = (string) ($row['last_message_at'] ?? $row['updated_at'] ?? $row['created_at'] ?? '');
+                $updatedTimestamp = strtotime($updatedAt !== '' ? $updatedAt : $createdAt);
+                $recentThreshold = time() - (14 * 24 * 60 * 60);
+                $isRecent = $updatedTimestamp !== false && $updatedTimestamp >= $recentThreshold;
                 ?>
-                <article class="zz-coach-item" aria-labelledby="zz-coach-history-thread-<?= h((string) $threadId) ?>">
-                    <h3 id="zz-coach-history-thread-<?= h((string) $threadId) ?>" class="zz-coach-item__title"><?= h($summary) ?></h3>
+                <article class="zz-coach-item zz-coach-history-item<?= $isRecent ? ' is-recent' : ' is-older' ?>" aria-labelledby="zz-coach-history-thread-<?= h((string) $threadId) ?>">
+                    <h3 id="zz-coach-history-thread-<?= h((string) $threadId) ?>" class="zz-coach-item__title zz-coach-item__title--clamp"><?= h($summary) ?></h3>
                     <p class="zz-coach-item__meta">
+                        <?php if ($situationTypeLabel !== ''): ?>
+                            <span class="zz-badge zz-badge--neutral zz-badge--sm"><?= h(ucwords($situationTypeLabel)) ?></span>
+                            <span aria-hidden="true">&middot;</span>
+                        <?php endif; ?>
                         Created <?= h(zz_format_datetime($createdAt !== '' ? $createdAt : null)) ?>
                         <span aria-hidden="true">&middot;</span>
                         Updated <?= h(zz_format_datetime($updatedAt !== '' ? $updatedAt : null)) ?>

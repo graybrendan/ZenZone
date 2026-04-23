@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/helpers.php';
 require_once __DIR__ . '/../../includes/coach_engine.php';
 require_once __DIR__ . '/../../includes/date_helpers.php';
+require_once __DIR__ . '/../../includes/coach_view_helpers.php';
 
 requireLogin();
 
@@ -102,6 +103,20 @@ if ($topRecommendation !== null) {
     }
 }
 
+$outcomeStmt = $db->prepare("
+    SELECT outcome, created_at
+    FROM coach_outcomes
+    WHERE thread_id = :thread_id
+      AND user_id = :user_id
+    ORDER BY id DESC
+    LIMIT 1
+");
+$outcomeStmt->execute([
+    'thread_id' => $threadId,
+    'user_id' => $userId,
+]);
+$loggedOutcome = $outcomeStmt->fetch();
+
 $createdAt = (string) ($thread['created_at'] ?? '');
 $updatedAt = (string) ($thread['last_message_at'] ?? $thread['updated_at'] ?? $thread['created_at'] ?? '');
 $createdLabel = zz_format_datetime($createdAt !== '' ? $createdAt : null);
@@ -113,11 +128,6 @@ $pageHelper = 'Review your recommendation and take the next useful action.';
 $activeNav = 'coach';
 $showBackButton = true;
 $backHref = BASE_URL . '/coach/index.php';
-
-function h($value): string
-{
-    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-}
 
 function coachTypeLabel(string $type): string
 {
@@ -203,16 +213,18 @@ function coachCleanRecommendationText(string $text): string
 
             <?php if ($topRecommendation !== null): ?>
                 <article class="zz-coach-rec-primary">
-                    <h4><?= h((string) ($topRecommendation['title'] ?? 'Top recommendation')) ?></h4>
+                    <div class="zz-coach-rec-primary__head">
+                        <h4><?= h((string) ($topRecommendation['title'] ?? 'Top recommendation')) ?></h4>
+                        <span class="zz-badge zz-badge--gold zz-badge--sm"><?= h((string) ((int) ($topRecommendation['duration_minutes'] ?? 0))) ?> min</span>
+                    </div>
                     <?php $topWhy = coachCleanRecommendationText((string) ($topRecommendation['why_this_works'] ?? '')); ?>
                     <?php $topWhen = coachCleanRecommendationText((string) ($topRecommendation['when_to_use'] ?? '')); ?>
                     <?php if ($topWhy !== ''): ?>
-                        <p class="zz-help"><strong>Why this works:</strong> <?= h($topWhy) ?></p>
+                        <p class="zz-help"><span class="zz-coach-rec-label">Why this works:</span> <?= h($topWhy) ?></p>
                     <?php endif; ?>
                     <?php if ($topWhen !== ''): ?>
-                        <p class="zz-help"><strong>When to use:</strong> <?= h($topWhen) ?></p>
+                        <p class="zz-help"><span class="zz-coach-rec-label">When to use:</span> <?= h($topWhen) ?></p>
                     <?php endif; ?>
-                    <p class="zz-help"><strong>Estimated duration:</strong> <?= h((string) ((int) ($topRecommendation['duration_minutes'] ?? 0))) ?> min</p>
 
                     <?php if (!empty($topRecommendation['steps']) && is_array($topRecommendation['steps'])): ?>
                         <?php
@@ -265,10 +277,10 @@ function coachCleanRecommendationText(string $text): string
                         <?php $altWhy = coachCleanRecommendationText((string) ($alternative['why_this_works'] ?? '')); ?>
                         <?php $altWhen = coachCleanRecommendationText((string) ($alternative['when_to_use'] ?? '')); ?>
                         <?php if ($altWhy !== ''): ?>
-                            <p class="zz-help"><strong>Why this works:</strong> <?= h($altWhy) ?></p>
+                            <p class="zz-help"><span class="zz-coach-rec-label">Why this works:</span> <?= h($altWhy) ?></p>
                         <?php endif; ?>
                         <?php if ($altWhen !== ''): ?>
-                            <p class="zz-help"><strong>When to use:</strong> <?= h($altWhen) ?></p>
+                            <p class="zz-help"><span class="zz-coach-rec-label">When to use:</span> <?= h($altWhen) ?></p>
                         <?php endif; ?>
                         <p class="zz-help"><strong>Estimated duration:</strong> <?= h((string) ((int) ($alternative['duration_minutes'] ?? 0))) ?> min</p>
 
@@ -300,6 +312,42 @@ function coachCleanRecommendationText(string $text): string
         </details>
     <?php endif; ?>
 
+    <?php
+    $outcomeValue = strtolower(trim((string) ($loggedOutcome['outcome'] ?? '')));
+    $outcomeLabel = $outcomeValue !== '' ? ucfirst($outcomeValue) : '';
+    $outcomeBadgeClass = 'zz-badge--neutral';
+    if ($outcomeValue === 'better') {
+        $outcomeBadgeClass = 'zz-badge--success';
+    } elseif ($outcomeValue === 'worse') {
+        $outcomeBadgeClass = 'zz-badge--warning';
+    }
+    ?>
+    <?php if ($outcomeValue === ''): ?>
+        <article class="zz-card zz-coach-outcome">
+            <h3 class="zz-coach-card-title">How did it go?</h3>
+            <p class="zz-help">After trying the recommendation, log how you feel. This helps improve future suggestions.</p>
+            <form method="POST" action="<?= h(BASE_URL . '/api/coach/outcome.php') ?>" class="zz-coach-outcome-form">
+                <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
+                <input type="hidden" name="thread_id" value="<?= h((string) $threadId) ?>">
+                <div class="zz-outcome-buttons">
+                    <button type="submit" name="outcome" value="better" class="zz-btn zz-btn--success zz-btn--sm">Better</button>
+                    <button type="submit" name="outcome" value="same" class="zz-btn zz-btn--secondary zz-btn--sm">Same</button>
+                    <button type="submit" name="outcome" value="worse" class="zz-btn zz-btn--accent zz-btn--sm">Worse</button>
+                </div>
+            </form>
+        </article>
+    <?php else: ?>
+        <article class="zz-card zz-coach-outcome zz-coach-outcome--logged">
+            <p class="zz-help">You logged: <span class="zz-badge <?= h($outcomeBadgeClass) ?>"><?= h($outcomeLabel) ?></span></p>
+        </article>
+    <?php endif; ?>
+
+    <div class="zz-coach-actions" aria-label="Coach situation actions">
+        <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/coach/edit.php?id=' . $threadId) ?>">Edit Situation</a>
+        <a class="zz-btn zz-btn--ghost zz-btn--sm" href="<?= h(BASE_URL . '/coach/index.php') ?>">New Situation</a>
+        <a class="zz-btn zz-btn--ghost zz-btn--sm" href="<?= h(BASE_URL . '/dashboard.php') ?>">Dashboard</a>
+    </div>
+
     <details class="zz-card zz-coach-details zz-coach-situation">
         <summary class="zz-section-title">Situation Details</summary>
         <dl class="zz-detail-list zz-coach-meta-list">
@@ -315,18 +363,6 @@ function coachCleanRecommendationText(string $text): string
             <dd><?= nl2br(h((string) ($thread['situation_text'] ?? ''))) ?></dd>
         </dl>
     </details>
-
-    <div class="zz-coach-actions" aria-label="Coach situation actions">
-        <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/coach/edit.php?id=' . $threadId) ?>">Edit</a>
-        <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/coach/history.php') ?>">View History</a>
-        <a class="zz-btn zz-btn--ghost zz-btn--sm" href="<?= h(BASE_URL . '/coach/index.php') ?>">Back to Coach</a>
-
-        <form method="POST" action="../../api/coach/delete.php" class="zz-inline-form" data-coach-delete-form data-confirm-message="Delete this coach situation? This cannot be undone.">
-            <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
-            <input type="hidden" name="thread_id" value="<?= h((string) $threadId) ?>">
-            <button type="submit" class="zz-btn zz-btn--danger zz-btn--sm">Delete</button>
-        </form>
-    </div>
 </section>
 
 <?php require_once __DIR__ . '/../../includes/partials/footer.php'; ?>

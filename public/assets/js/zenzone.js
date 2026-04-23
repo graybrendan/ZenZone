@@ -1030,10 +1030,135 @@
     });
   }
 
+  function splitChipValues(value) {
+    return String(value || '')
+      .split(',')
+      .map(function (item) {
+        return item.trim();
+      })
+      .filter(function (item) {
+        return item !== '';
+      });
+  }
+
+  function initChipTargetInsertion() {
+    var groups = document.querySelectorAll('[data-chip-target]');
+    if (!groups.length) {
+      return;
+    }
+
+    groups.forEach(function (group) {
+      var targetSelector = group.getAttribute('data-chip-target') || '';
+      if (targetSelector === '') {
+        return;
+      }
+
+      var target = document.querySelector(targetSelector);
+      if (!target) {
+        return;
+      }
+
+      var chips = Array.prototype.slice.call(group.querySelectorAll('.zz-chip'));
+      chips.forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          var value = (
+            chip.getAttribute('data-value') ||
+            chip.textContent ||
+            ''
+          ).trim();
+          if (value === '') {
+            return;
+          }
+
+          var values = splitChipValues(target.value);
+          if (values.indexOf(value) === -1) {
+            values.push(value);
+          }
+
+          target.value = values.join(', ');
+          target.dispatchEvent(new Event('input', { bubbles: true }));
+
+          chips.forEach(function (item) {
+            item.classList.remove('is-selected');
+            item.setAttribute('aria-pressed', 'false');
+          });
+
+          chip.classList.add('is-selected');
+          chip.setAttribute('aria-pressed', 'true');
+          target.focus();
+        });
+      });
+    });
+  }
+
+  /* ============ Card radio + time pill selection ============ */
+  function initCoachSelectionFallbacks() {
+    document.addEventListener('change', function (e) {
+      if (!e.target.matches('.zz-card-radio input[type="radio"]')) {
+        return;
+      }
+
+      var group = e.target.closest('.zz-card-radio-group');
+      if (!group) {
+        return;
+      }
+
+      var cards = group.querySelectorAll('.zz-card-radio');
+      cards.forEach(function (card) {
+        card.classList.remove('is-selected');
+      });
+
+      var parent = e.target.closest('.zz-card-radio');
+      if (parent) {
+        parent.classList.add('is-selected');
+      }
+    });
+
+    document.addEventListener('change', function (e) {
+      if (!e.target.matches('.zz-time-pill input[type="radio"]')) {
+        return;
+      }
+
+      var group = e.target.closest('.zz-field') || e.target.closest('.zz-time-pills');
+      if (!group) {
+        return;
+      }
+
+      var pills = group.querySelectorAll('.zz-time-pill');
+      pills.forEach(function (pill) {
+        pill.classList.remove('is-selected');
+      });
+
+      var parent = e.target.closest('.zz-time-pill');
+      if (parent) {
+        parent.classList.add('is-selected');
+      }
+    });
+
+    document
+      .querySelectorAll('.zz-card-radio input[type="radio"]:checked')
+      .forEach(function (input) {
+        var card = input.closest('.zz-card-radio');
+        if (card) {
+          card.classList.add('is-selected');
+        }
+      });
+
+    document
+      .querySelectorAll('.zz-time-pill input[type="radio"]:checked')
+      .forEach(function (input) {
+        var pill = input.closest('.zz-time-pill');
+        if (pill) {
+          pill.classList.add('is-selected');
+        }
+      });
+  }
+
   function initZenZone() {
     initScales();
     initRadioScales();
     initChipGroups();
+    initChipTargetInsertion();
     initFloatingFields();
     initAppbarShadow();
     initAppbarMenu();
@@ -1047,6 +1172,7 @@
     initGoalPriorityAvailability();
     initGoalDeleteConfirm();
     initCoachDeleteConfirm();
+    initCoachSelectionFallbacks();
   }
 
   if (document.readyState === 'loading') {
