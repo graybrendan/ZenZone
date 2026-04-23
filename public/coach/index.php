@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/coach_engine.php';
 require_once __DIR__ . '/../../includes/validation.php';
+require_once __DIR__ . '/../../includes/date_helpers.php';
 
 requireLogin();
 
@@ -12,7 +13,6 @@ const COACH_HOME_PREVIEW_LIMIT = 5;
 $db = getDB();
 $userId = (int) $_SESSION['user_id'];
 $coachStorageReady = isCoachStorageReady($db);
-$flash = getFlashMessage();
 
 $formData = [
     'situation_text' => '',
@@ -72,184 +72,86 @@ if ($coachStorageReady) {
     $recentSituations = $listStmt->fetchAll();
 }
 
+$pageTitle = 'Coach';
+$pageEyebrow = 'Mental Performance';
+$pageHelper = 'Describe the moment and get one clear next action.';
+$activeNav = 'coach';
+$showBackButton = false;
+
 function h($value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
-function formatCoachDate(string $date): string
+function coachTypeLabel(string $type): string
 {
-    $timestamp = strtotime($date);
-    if ($timestamp === false) {
-        return $date;
+    $normalized = strtolower(trim($type));
+    $normalized = str_replace(['_', '-', '/'], ' ', $normalized);
+    $normalized = preg_replace('/\s+/', ' ', $normalized);
+    $normalized = is_string($normalized) ? trim($normalized) : '';
+
+    if ($normalized === '') {
+        return 'Other';
     }
 
-    return date('M j, Y g:i A', $timestamp);
-}
-
-function truncateSummary(string $summary, int $maxLength = 140): string
-{
-    return createCoachSituationSummary($summary, $maxLength);
+    return ucwords($normalized);
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coach - ZenZone</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 980px;
-            margin: 0 auto;
-            padding: 24px;
-            line-height: 1.45;
-        }
+<?php require_once __DIR__ . '/../../includes/partials/header.php'; ?>
 
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-bottom: 16px;
-        }
-
-        .button-link,
-        button {
-            display: inline-block;
-            padding: 8px 12px;
-            border: 1px solid #999;
-            border-radius: 6px;
-            text-decoration: none;
-            color: #000;
-            background: #f7f7f7;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .card {
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            padding: 14px;
-            margin-top: 14px;
-        }
-
-        .notice {
-            margin: 12px 0;
-            padding: 10px 12px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            background: #f5f5f5;
-        }
-
-        .notice.success {
-            border-color: #9bc29b;
-            background: #eef9ee;
-        }
-
-        .notice.error {
-            border-color: #d6a3a3;
-            background: #fff0f0;
-        }
-
-        .muted {
-            color: #666;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 10px;
-        }
-
-        textarea,
-        select,
-        input[type="text"] {
-            width: 100%;
-            box-sizing: border-box;
-            border: 1px solid #bbb;
-            border-radius: 6px;
-            padding: 8px;
-            font-family: inherit;
-            font-size: 14px;
-        }
-
-        .situation-list {
-            display: grid;
-            gap: 10px;
-        }
-
-        .situation-item {
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 10px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 8px;
-        }
-
-        .actions form {
-            margin: 0;
-        }
-    </style>
-</head>
-<body>
-    <div class="topbar">
-        <div>
-            <h1 style="margin: 0;">ZenZone Coach</h1>
-            <p class="muted" style="margin: 4px 0 0 0;">Mindfulness and sports psychology support for athletes. Situation -> best action -> done.</p>
-        </div>
-        <a class="button-link" href="../dashboard.php">Back to Dashboard</a>
-    </div>
-
-    <?php if ($flash): ?>
-        <div class="notice <?= h($flash['type']) ?>">
-            <?= h($flash['message']) ?>
-        </div>
-    <?php endif; ?>
+<section class="zz-coach-page zz-coach-home" aria-labelledby="zz-coach-home-title">
+    <h2 id="zz-coach-home-title" class="zz-visually-hidden">Coach home</h2>
 
     <?php if (!$coachStorageReady): ?>
-        <div class="card">
-            <h2 style="margin-top: 0;">Coach Setup Required</h2>
+        <article class="zz-card zz-alert zz-alert--warning zz-coach-setup" role="alert">
+            <h3 class="zz-coach-card-title">Coach Setup Required</h3>
             <p>The Coach database tables are missing required columns.</p>
             <p>
-                Run:
+                Run
                 <code>sql/migrations/2026-04-15_001_coach_tables.sql</code>
                 and
                 <code>sql/migrations/2026-04-15_002_coach_thread_situation_fields.sql</code>
                 in phpMyAdmin.
             </p>
-        </div>
+        </article>
     <?php else: ?>
-        <div class="card">
-            <h2 style="margin-top: 0;">Start New Situation</h2>
-            <form method="POST" action="../../api/coach/submit.php">
+        <article class="zz-card zz-coach-start" aria-labelledby="zz-coach-start-title">
+            <h3 id="zz-coach-start-title" class="zz-coach-card-title">Start New Situation</h3>
+            <p class="zz-help">Describe what is happening, add quick context, and get one clear recommendation.</p>
+
+            <form method="POST" action="../../api/coach/submit.php" class="zz-coach-form" data-coach-char-form>
                 <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
 
-                <label for="situation_text"><strong>Describe what is going on</strong></label>
-                <textarea id="situation_text" name="situation_text" rows="5" maxlength="1200" required><?= h($formData['situation_text']) ?></textarea>
+                <div class="zz-field">
+                    <label for="situation_text" class="zz-label">What happened?</label>
+                    <textarea
+                        id="situation_text"
+                        name="situation_text"
+                        class="zz-textarea zz-textarea--journal"
+                        rows="5"
+                        maxlength="1200"
+                        data-coach-char-source="situation_text"
+                        required
+                    ><?= h($formData['situation_text']) ?></textarea>
+                    <p class="zz-help">Share enough detail so the recommendation fits your moment.</p>
+                    <p class="zz-help zz-coach-charcount" data-coach-char-target="situation_text" aria-live="polite"></p>
+                </div>
 
-                <div class="form-grid" style="margin-top: 10px;">
-                    <div>
-                        <label for="situation_type">Situation type</label>
-                        <select id="situation_type" name="situation_type" required>
+                <div class="zz-coach-form__grid">
+                    <div class="zz-field">
+                        <label for="situation_type" class="zz-label">Situation type</label>
+                        <select id="situation_type" name="situation_type" class="zz-select" required>
                             <?php foreach (getCoachSituationTypes() as $type): ?>
                                 <option value="<?= h($type) ?>" <?= $formData['situation_type'] === $type ? 'selected' : '' ?>>
-                                    <?= h(ucfirst($type)) ?>
+                                    <?= h(coachTypeLabel((string) $type)) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
-                    <div>
-                        <label for="time_available">Time available</label>
-                        <select id="time_available" name="time_available" required>
+                    <div class="zz-field">
+                        <label for="time_available" class="zz-label">Time available</label>
+                        <select id="time_available" name="time_available" class="zz-select" required>
                             <?php foreach (getCoachTimeOptions() as $minutes): ?>
                                 <option value="<?= (int) $minutes ?>" <?= ((int) $formData['time_available'] === (int) $minutes) ? 'selected' : '' ?>>
                                     <?= (int) $minutes ?> min
@@ -258,9 +160,9 @@ function truncateSummary(string $summary, int $maxLength = 140): string
                         </select>
                     </div>
 
-                    <div>
-                        <label for="stress_level">Stress level (1-5)</label>
-                        <select id="stress_level" name="stress_level" required>
+                    <div class="zz-field">
+                        <label for="stress_level" class="zz-label">Stress level (1-5)</label>
+                        <select id="stress_level" name="stress_level" class="zz-select" required>
                             <?php for ($i = 1; $i <= 5; $i++): ?>
                                 <option value="<?= $i ?>" <?= ((int) $formData['stress_level'] === $i) ? 'selected' : '' ?>>
                                     <?= $i ?>
@@ -270,58 +172,78 @@ function truncateSummary(string $summary, int $maxLength = 140): string
                     </div>
                 </div>
 
-                <div style="margin-top: 10px;">
-                    <label for="upcoming_event">Upcoming event (optional)</label>
-                    <input id="upcoming_event" name="upcoming_event" type="text" maxlength="120" value="<?= h($formData['upcoming_event']) ?>">
+                <div class="zz-field">
+                    <div class="zz-field__header">
+                        <label for="upcoming_event" class="zz-label">Upcoming event</label>
+                        <span class="zz-optional-tag">Optional</span>
+                    </div>
+                    <input
+                        id="upcoming_event"
+                        name="upcoming_event"
+                        type="text"
+                        maxlength="120"
+                        class="zz-input"
+                        value="<?= h($formData['upcoming_event']) ?>"
+                    >
                 </div>
 
-                <div style="margin-top: 12px;">
-                    <button type="submit">Get Coach Recommendation</button>
+                <div class="zz-coach-form__actions">
+                    <button type="submit" class="zz-btn zz-btn--primary">Get Coach Recommendation</button>
+                    <a class="zz-btn zz-btn--ghost" href="<?= h(BASE_URL . '/coach/history.php') ?>">View History</a>
                 </div>
             </form>
-        </div>
+        </article>
 
-        <div class="card">
-            <h2 style="margin-top: 0;">Recent Coach Situations</h2>
+        <article class="zz-card zz-coach-recent" aria-labelledby="zz-coach-recent-title">
+            <div class="zz-coach-card-head">
+                <h3 id="zz-coach-recent-title" class="zz-coach-card-title">Recent Coach Situations</h3>
+                <?php if ($totalSituations > COACH_HOME_PREVIEW_LIMIT): ?>
+                    <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/coach/history.php') ?>">View All</a>
+                <?php endif; ?>
+            </div>
 
             <?php if (empty($recentSituations)): ?>
-                <p class="muted">No coach situations yet. Start one above.</p>
+                <div class="zz-coach-empty">
+                    <svg class="zz-coach-empty__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H10l-5 4V7a2 2 0 0 1 2-2z"></path>
+                        <path d="M9 10h6"></path>
+                        <path d="M9 13h4"></path>
+                    </svg>
+                    <h4>No coach situations yet</h4>
+                    <p>Start one above to get your first recommendation.</p>
+                </div>
             <?php else: ?>
-                <div class="situation-list">
+                <div class="zz-coach-list">
                     <?php foreach ($recentSituations as $row): ?>
                         <?php
-                        $situationId = (int) ($row['id'] ?? 0);
-                        $createdTime = (string) ($row['created_at'] ?? '');
-                        $updatedTime = (string) ($row['last_message_at'] ?? $row['updated_at'] ?? $row['created_at'] ?? '');
-                        $summary = truncateSummary((string) ($row['summary'] ?? ''));
+                        $threadId = (int) ($row['id'] ?? 0);
+                        $summary = createCoachSituationSummary((string) ($row['summary'] ?? ''), 170);
+                        $createdAt = (string) ($row['created_at'] ?? '');
+                        $updatedAt = (string) ($row['last_message_at'] ?? $row['updated_at'] ?? $row['created_at'] ?? '');
                         ?>
-                        <div class="situation-item">
-                            <p style="margin: 0 0 6px 0;"><strong><?= h($summary) ?></strong></p>
-                            <p class="muted" style="margin: 0;">
-                                Created: <?= h(formatCoachDate($createdTime)) ?> |
-                                Updated: <?= h(formatCoachDate($updatedTime)) ?>
+                        <article class="zz-coach-item" aria-labelledby="zz-coach-thread-<?= h((string) $threadId) ?>">
+                            <h4 id="zz-coach-thread-<?= h((string) $threadId) ?>" class="zz-coach-item__title"><?= h($summary) ?></h4>
+                            <p class="zz-coach-item__meta">
+                                Created <?= h(zz_format_datetime($createdAt !== '' ? $createdAt : null)) ?>
+                                <span aria-hidden="true">&middot;</span>
+                                Updated <?= h(zz_format_datetime($updatedAt !== '' ? $updatedAt : null)) ?>
                             </p>
 
-                            <div class="actions">
-                                <a class="button-link" href="view.php?id=<?= $situationId ?>">View</a>
-                                <a class="button-link" href="edit.php?id=<?= $situationId ?>">Edit</a>
-                                <form method="POST" action="../../api/coach/delete.php" onsubmit="return confirm('Delete this coach situation? This cannot be undone.');">
+                            <div class="zz-coach-item__actions">
+                                <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/coach/view.php?id=' . $threadId) ?>">View</a>
+                                <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/coach/edit.php?id=' . $threadId) ?>">Edit</a>
+                                <form method="POST" action="../../api/coach/delete.php" class="zz-inline-form" data-coach-delete-form data-confirm-message="Delete this coach situation? This cannot be undone.">
                                     <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
-                                    <input type="hidden" name="thread_id" value="<?= $situationId ?>">
-                                    <button type="submit">Delete</button>
+                                    <input type="hidden" name="thread_id" value="<?= h((string) $threadId) ?>">
+                                    <button type="submit" class="zz-btn zz-btn--danger zz-btn--sm">Delete</button>
                                 </form>
                             </div>
-                        </div>
+                        </article>
                     <?php endforeach; ?>
                 </div>
-
-                <?php if ($totalSituations > COACH_HOME_PREVIEW_LIMIT): ?>
-                    <p style="margin-top: 12px;">
-                        <a class="button-link" href="history.php">View all</a>
-                    </p>
-                <?php endif; ?>
             <?php endif; ?>
-        </div>
+        </article>
     <?php endif; ?>
-</body>
-</html>
+</section>
+
+<?php require_once __DIR__ . '/../../includes/partials/footer.php'; ?>

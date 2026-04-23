@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/helpers.php';
 require_once __DIR__ . '/../../includes/coach_engine.php';
+require_once __DIR__ . '/../../includes/date_helpers.php';
 
 requireLogin();
 
@@ -80,236 +81,184 @@ if ($coachResponse === null) {
     ]);
 }
 
-$flash = getFlashMessage();
+$threadSummary = trim((string) ($thread['summary'] ?? ''));
+if ($threadSummary === '') {
+    $threadSummary = createCoachSituationSummary((string) ($thread['situation_text'] ?? ''), 180);
+}
+
+$topRecommendation = is_array($coachResponse['top_recommendation'] ?? null)
+    ? $coachResponse['top_recommendation']
+    : null;
+$alternatives = is_array($coachResponse['alternatives'] ?? null)
+    ? $coachResponse['alternatives']
+    : [];
+
+$topSlug = '';
+$topLessonExists = false;
+if ($topRecommendation !== null) {
+    $topSlug = trim((string) ($topRecommendation['slug'] ?? ''));
+    if ($topSlug !== '') {
+        $topLessonExists = getLessonBySlug($topSlug) !== null;
+    }
+}
+
+$createdAt = (string) ($thread['created_at'] ?? '');
+$updatedAt = (string) ($thread['last_message_at'] ?? $thread['updated_at'] ?? $thread['created_at'] ?? '');
+$createdLabel = zz_format_datetime($createdAt !== '' ? $createdAt : null);
+$updatedLabel = zz_format_datetime($updatedAt !== '' ? $updatedAt : null);
+
+$pageTitle = 'Coach Situation';
+$pageEyebrow = 'Coach';
+$pageHelper = 'Review your recommendation and take the next useful action.';
+$activeNav = 'coach';
+$showBackButton = true;
+$backHref = BASE_URL . '/coach/index.php';
 
 function h($value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
-function formatCoachDateTime(string $value): string
+function coachTypeLabel(string $type): string
 {
-    $timestamp = strtotime($value);
-    if ($timestamp === false) {
-        return $value;
+    $normalized = strtolower(trim($type));
+    $normalized = str_replace(['_', '-', '/'], ' ', $normalized);
+    $normalized = preg_replace('/\s+/', ' ', $normalized);
+    $normalized = is_string($normalized) ? trim($normalized) : '';
+
+    if ($normalized === '') {
+        return 'Other';
     }
 
-    return date('M j, Y g:i A', $timestamp);
+    return ucwords($normalized);
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coach Situation - ZenZone</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 980px;
-            margin: 0 auto;
-            padding: 24px;
-            line-height: 1.45;
-        }
+<?php require_once __DIR__ . '/../../includes/partials/header.php'; ?>
 
-        .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-bottom: 16px;
-        }
+<section class="zz-coach-page zz-coach-view" aria-labelledby="zz-coach-view-title">
+    <h2 id="zz-coach-view-title" class="zz-visually-hidden">Coach situation details</h2>
 
-        .button-link,
-        button {
-            display: inline-block;
-            padding: 8px 12px;
-            border: 1px solid #999;
-            border-radius: 6px;
-            text-decoration: none;
-            color: #000;
-            background: #f7f7f7;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .card {
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            padding: 14px;
-            margin-top: 14px;
-        }
-
-        .notice {
-            margin: 12px 0;
-            padding: 10px 12px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            background: #f5f5f5;
-        }
-
-        .notice.success {
-            border-color: #9bc29b;
-            background: #eef9ee;
-        }
-
-        .notice.error {
-            border-color: #d6a3a3;
-            background: #fff0f0;
-        }
-
-        .muted {
-            color: #666;
-        }
-
-        .recommendation {
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 12px;
-            margin-top: 10px;
-        }
-
-        textarea {
-            width: 100%;
-            box-sizing: border-box;
-            border: 1px solid #bbb;
-            border-radius: 6px;
-            padding: 8px;
-            font-family: inherit;
-            font-size: 14px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
-
-        .actions form {
-            margin: 0;
-        }
-
-        .crisis-box {
-            border: 1px solid #d6a3a3;
-            background: #fff0f0;
-            border-radius: 8px;
-            padding: 10px;
-            margin-top: 8px;
-        }
-    </style>
-</head>
-<body>
-    <div class="topbar">
-        <div>
-            <h1 style="margin: 0;">Coach Situation</h1>
-            <p class="muted" style="margin: 4px 0 0 0;">Created <?= h(formatCoachDateTime((string) ($thread['created_at'] ?? ''))) ?></p>
+    <article class="zz-card zz-coach-thread" aria-labelledby="zz-coach-thread-title">
+        <h3 id="zz-coach-thread-title" class="zz-coach-thread__title"><?= h($threadSummary) ?></h3>
+        <div class="zz-coach-thread__meta">
+            <span class="zz-badge zz-badge--neutral zz-badge--sm"><?= h(coachTypeLabel((string) ($thread['situation_type'] ?? 'other'))) ?></span>
+            <span class="zz-badge zz-badge--sage zz-badge--sm"><?= h((string) ((int) ($thread['time_available'] ?? 0))) ?> min</span>
+            <span class="zz-badge zz-badge--gold zz-badge--sm">Stress <?= h((string) ((int) ($thread['stress_level'] ?? 0))) ?>/5</span>
         </div>
-        <a class="button-link" href="index.php">Back to Coach Home</a>
-    </div>
+        <p class="zz-coach-thread__dates zz-date-time">
+            Created <?= h($createdLabel) ?>
+            <span aria-hidden="true">&middot;</span>
+            Updated <?= h($updatedLabel) ?>
+        </p>
+    </article>
 
-    <?php if ($flash): ?>
-        <div class="notice <?= h($flash['type']) ?>">
-            <?= h($flash['message']) ?>
-        </div>
-    <?php endif; ?>
-
-    <div class="card">
-        <h2 style="margin-top: 0;">Summary</h2>
-        <p style="margin-bottom: 0;"><strong><?= h((string) ($thread['summary'] ?? '')) ?></strong></p>
-    </div>
-
-    <div class="card">
-        <h2 style="margin-top: 0;">Situation Details</h2>
-        <p><strong>Situation type:</strong> <?= h((string) ($thread['situation_type'] ?? '')) ?></p>
-        <p><strong>Time available:</strong> <?= (int) ($thread['time_available'] ?? 0) ?> min</p>
-        <p><strong>Stress level:</strong> <?= (int) ($thread['stress_level'] ?? 0) ?> / 5</p>
-        <p><strong>Upcoming event:</strong> <?= h((string) (($thread['upcoming_event'] ?? '') !== '' ? $thread['upcoming_event'] : 'None')) ?></p>
-        <p><strong>What happened:</strong><br><?= nl2br(h((string) ($thread['situation_text'] ?? ''))) ?></p>
-    </div>
-
-    <div class="card">
-        <h2 style="margin-top: 0;">Recommendation</h2>
+    <article class="zz-card zz-coach-recommendation" aria-labelledby="zz-coach-recommendation-title">
+        <h3 id="zz-coach-recommendation-title" class="zz-coach-card-title">Recommendation</h3>
 
         <?php if (!empty($coachResponse['crisis_detected'])): ?>
-            <div class="crisis-box">
+            <div class="zz-alert zz-alert--danger zz-coach-crisis" role="alert">
                 <p><strong>Immediate support recommended</strong></p>
-                <p><?= h((string) ($coachResponse['crisis_message'] ?? '')) ?></p>
-                <p><?= h((string) ($coachResponse['coach_message'] ?? '')) ?></p>
+                <?php if (trim((string) ($coachResponse['crisis_message'] ?? '')) !== ''): ?>
+                    <p><?= h((string) $coachResponse['crisis_message']) ?></p>
+                <?php endif; ?>
+                <?php if (trim((string) ($coachResponse['coach_message'] ?? '')) !== ''): ?>
+                    <p><?= h((string) $coachResponse['coach_message']) ?></p>
+                <?php endif; ?>
             </div>
         <?php else: ?>
             <?php if (!empty($coachResponse['summary'])): ?>
-                <p><strong>Coach summary:</strong> <?= h((string) $coachResponse['summary']) ?></p>
+                <p class="zz-coach-recommendation__summary"><?= h((string) $coachResponse['summary']) ?></p>
             <?php endif; ?>
 
-            <?php $top = is_array($coachResponse['top_recommendation'] ?? null) ? $coachResponse['top_recommendation'] : null; ?>
-            <?php if ($top): ?>
-                <div class="recommendation">
-                    <h3 style="margin-top: 0;">Top recommendation: <?= h((string) ($top['title'] ?? '')) ?></h3>
-                    <p><strong>Why this works:</strong> <?= h((string) ($top['why_this_works'] ?? '')) ?></p>
-                    <p><strong>When to use:</strong> <?= h((string) ($top['when_to_use'] ?? '')) ?></p>
-                    <p><strong>Estimated duration:</strong> <?= (int) ($top['duration_minutes'] ?? 0) ?> min</p>
+            <?php if ($topRecommendation !== null): ?>
+                <article class="zz-coach-rec-primary">
+                    <h4><?= h((string) ($topRecommendation['title'] ?? 'Top recommendation')) ?></h4>
+                    <p class="zz-help"><strong>Why this works:</strong> <?= h((string) ($topRecommendation['why_this_works'] ?? '')) ?></p>
+                    <p class="zz-help"><strong>When to use:</strong> <?= h((string) ($topRecommendation['when_to_use'] ?? '')) ?></p>
+                    <p class="zz-help"><strong>Estimated duration:</strong> <?= h((string) ((int) ($topRecommendation['duration_minutes'] ?? 0))) ?> min</p>
 
-                    <?php if (!empty($top['steps']) && is_array($top['steps'])): ?>
-                        <p><strong>Steps:</strong></p>
-                        <ol>
-                            <?php foreach ($top['steps'] as $step): ?>
+                    <?php if (!empty($topRecommendation['steps']) && is_array($topRecommendation['steps'])): ?>
+                        <ol class="zz-coach-rec-steps">
+                            <?php foreach ($topRecommendation['steps'] as $step): ?>
                                 <li><?= h((string) $step) ?></li>
                             <?php endforeach; ?>
                         </ol>
                     <?php endif; ?>
 
-                    <?php $topSlug = trim((string) ($top['slug'] ?? '')); ?>
-                    <?php if ($topSlug !== '' && getLessonBySlug($topSlug) !== null): ?>
-                        <p><a class="button-link" href="../content/view.php?slug=<?= urlencode($topSlug) ?>">Start this tool</a></p>
+                    <?php if ($topSlug !== '' && $topLessonExists): ?>
+                        <a class="zz-btn zz-btn--primary zz-btn--sm" href="<?= h(BASE_URL . '/content/view.php?slug=' . urlencode($topSlug)) ?>">Start This Tool</a>
                     <?php endif; ?>
-                </div>
+                </article>
+            <?php else: ?>
+                <p class="zz-muted">No top recommendation was available for this situation.</p>
             <?php endif; ?>
 
-            <?php $alternatives = is_array($coachResponse['alternatives'] ?? null) ? $coachResponse['alternatives'] : []; ?>
-            <?php if (!empty($alternatives)): ?>
-                <h3 style="margin-top: 16px;">Alternatives</h3>
+            <?php if (!empty($coachResponse['coach_message'])): ?>
+                <p class="zz-coach-recommendation__message"><?= h((string) $coachResponse['coach_message']) ?></p>
+            <?php endif; ?>
+        <?php endif; ?>
+    </article>
+
+    <?php if (!empty($alternatives)): ?>
+        <details class="zz-card zz-coach-details zz-coach-alternatives">
+            <summary class="zz-section-title">Alternatives (<?= h((string) count($alternatives)) ?>)</summary>
+            <div class="zz-coach-alt-list">
                 <?php foreach ($alternatives as $alternative): ?>
                     <?php if (!is_array($alternative)): continue; endif; ?>
-                    <div class="recommendation">
-                        <h4 style="margin-top: 0;"><?= h((string) ($alternative['title'] ?? 'Alternate tool')) ?></h4>
-                        <p><strong>Why this works:</strong> <?= h((string) ($alternative['why_this_works'] ?? '')) ?></p>
-                        <p><strong>When to use:</strong> <?= h((string) ($alternative['when_to_use'] ?? '')) ?></p>
-                        <p><strong>Estimated duration:</strong> <?= (int) ($alternative['duration_minutes'] ?? 0) ?> min</p>
+                    <?php
+                    $altSlug = trim((string) ($alternative['slug'] ?? ''));
+                    $altLessonExists = ($altSlug !== '' && getLessonBySlug($altSlug) !== null);
+                    ?>
+                    <article class="zz-coach-alt-item">
+                        <h4><?= h((string) ($alternative['title'] ?? 'Alternative tool')) ?></h4>
+                        <p class="zz-help"><strong>Why this works:</strong> <?= h((string) ($alternative['why_this_works'] ?? '')) ?></p>
+                        <p class="zz-help"><strong>When to use:</strong> <?= h((string) ($alternative['when_to_use'] ?? '')) ?></p>
+                        <p class="zz-help"><strong>Estimated duration:</strong> <?= h((string) ((int) ($alternative['duration_minutes'] ?? 0))) ?> min</p>
 
                         <?php if (!empty($alternative['steps']) && is_array($alternative['steps'])): ?>
-                            <p><strong>Steps:</strong></p>
-                            <ol>
+                            <ol class="zz-coach-alt-item__steps">
                                 <?php foreach ($alternative['steps'] as $step): ?>
                                     <li><?= h((string) $step) ?></li>
                                 <?php endforeach; ?>
                             </ol>
                         <?php endif; ?>
 
-                        <?php $altSlug = trim((string) ($alternative['slug'] ?? '')); ?>
-                        <?php if ($altSlug !== '' && getLessonBySlug($altSlug) !== null): ?>
-                            <p><a class="button-link" href="../content/view.php?slug=<?= urlencode($altSlug) ?>">Start this tool</a></p>
+                        <?php if ($altLessonExists): ?>
+                            <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/content/view.php?slug=' . urlencode($altSlug)) ?>">Start This Tool</a>
                         <?php endif; ?>
-                    </div>
+                    </article>
                 <?php endforeach; ?>
-            <?php endif; ?>
-        <?php endif; ?>
-    </div>
+            </div>
+        </details>
+    <?php endif; ?>
 
-    <div class="card">
-        <h2 style="margin-top: 0;">Actions</h2>
-        <div class="actions">
-            <a class="button-link" href="edit.php?id=<?= $threadId ?>">Edit situation</a>
-            <a class="button-link" href="history.php">View all situations</a>
-            <a class="button-link" href="index.php">Back to Coach home</a>
+    <details class="zz-card zz-coach-details zz-coach-situation">
+        <summary class="zz-section-title">Situation Details</summary>
+        <dl class="zz-detail-list zz-coach-meta-list">
+            <dt>Situation type</dt>
+            <dd><?= h(coachTypeLabel((string) ($thread['situation_type'] ?? 'other'))) ?></dd>
+            <dt>Time available</dt>
+            <dd><?= h((string) ((int) ($thread['time_available'] ?? 0))) ?> min</dd>
+            <dt>Stress level</dt>
+            <dd><?= h((string) ((int) ($thread['stress_level'] ?? 0))) ?> / 5</dd>
+            <dt>Upcoming event</dt>
+            <dd><?= h((string) (($thread['upcoming_event'] ?? '') !== '' ? $thread['upcoming_event'] : 'None')) ?></dd>
+            <dt>What happened</dt>
+            <dd><?= nl2br(h((string) ($thread['situation_text'] ?? ''))) ?></dd>
+        </dl>
+    </details>
 
-            <form method="POST" action="../../api/coach/delete.php" onsubmit="return confirm('Delete this coach situation? This cannot be undone.');">
-                <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
-                <input type="hidden" name="thread_id" value="<?= $threadId ?>">
-                <button type="submit">Delete situation</button>
-            </form>
-        </div>
+    <div class="zz-coach-actions" aria-label="Coach situation actions">
+        <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/coach/edit.php?id=' . $threadId) ?>">Edit</a>
+        <a class="zz-btn zz-btn--secondary zz-btn--sm" href="<?= h(BASE_URL . '/coach/history.php') ?>">View History</a>
+        <a class="zz-btn zz-btn--ghost zz-btn--sm" href="<?= h(BASE_URL . '/coach/index.php') ?>">Back to Coach</a>
+
+        <form method="POST" action="../../api/coach/delete.php" class="zz-inline-form" data-coach-delete-form data-confirm-message="Delete this coach situation? This cannot be undone.">
+            <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
+            <input type="hidden" name="thread_id" value="<?= h((string) $threadId) ?>">
+            <button type="submit" class="zz-btn zz-btn--danger zz-btn--sm">Delete</button>
+        </form>
     </div>
-</body>
-</html>
+</section>
+
+<?php require_once __DIR__ . '/../../includes/partials/footer.php'; ?>

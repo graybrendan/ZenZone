@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../includes/session.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/validation.php';
 require_once __DIR__ . '/../../includes/coach_engine.php';
+require_once __DIR__ . '/../../includes/date_helpers.php';
 
 requireLogin();
 
@@ -48,8 +49,6 @@ if (!$thread) {
     authRedirect('coach/index.php');
 }
 
-$flash = getFlashMessage();
-
 $formData = [
     'situation_text' => (string) ($thread['situation_text'] ?? ''),
     'situation_type' => (string) ($thread['situation_type'] ?? 'other'),
@@ -79,134 +78,76 @@ if (!isValidScaleRating((int) $formData['stress_level'], 1, 5)) {
     $formData['stress_level'] = '3';
 }
 
+$pageTitle = 'Edit Coach Situation';
+$pageEyebrow = 'Coach';
+$pageHelper = 'Update details and refresh your recommendation.';
+$activeNav = 'coach';
+$showBackButton = true;
+$backHref = BASE_URL . '/coach/view.php?id=' . $threadId;
+
 function h($value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
 
-function formatCoachDateTime(string $value): string
+function coachTypeLabel(string $type): string
 {
-    $timestamp = strtotime($value);
-    if ($timestamp === false) {
-        return $value;
+    $normalized = strtolower(trim($type));
+    $normalized = str_replace(['_', '-', '/'], ' ', $normalized);
+    $normalized = preg_replace('/\s+/', ' ', $normalized);
+    $normalized = is_string($normalized) ? trim($normalized) : '';
+
+    if ($normalized === '') {
+        return 'Other';
     }
 
-    return date('M j, Y g:i A', $timestamp);
+    return ucwords($normalized);
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Coach Situation - ZenZone</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 24px;
-            line-height: 1.45;
-        }
+<?php require_once __DIR__ . '/../../includes/partials/header.php'; ?>
 
-        .button-link,
-        button {
-            display: inline-block;
-            padding: 8px 12px;
-            border: 1px solid #999;
-            border-radius: 6px;
-            text-decoration: none;
-            color: #000;
-            background: #f7f7f7;
-            cursor: pointer;
-            font-size: 14px;
-        }
+<section class="zz-coach-page zz-coach-edit" aria-labelledby="zz-coach-edit-title">
+    <h2 id="zz-coach-edit-title" class="zz-visually-hidden">Edit coach situation</h2>
 
-        .card {
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            padding: 14px;
-            margin-top: 14px;
-        }
+    <article class="zz-card zz-coach-thread">
+        <h3 class="zz-coach-card-title">Edit Situation</h3>
+        <p class="zz-help">Last updated <?= h(zz_format_datetime((string) ($thread['updated_at'] ?? ''))) ?></p>
+    </article>
 
-        .notice {
-            margin: 12px 0;
-            padding: 10px 12px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            background: #f5f5f5;
-        }
-
-        .notice.success {
-            border-color: #9bc29b;
-            background: #eef9ee;
-        }
-
-        .notice.error {
-            border-color: #d6a3a3;
-            background: #fff0f0;
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 10px;
-        }
-
-        textarea,
-        select,
-        input[type="text"] {
-            width: 100%;
-            box-sizing: border-box;
-            border: 1px solid #bbb;
-            border-radius: 6px;
-            padding: 8px;
-            font-family: inherit;
-            font-size: 14px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 12px;
-        }
-    </style>
-</head>
-<body>
-    <h1>Edit Coach Situation</h1>
-    <p>Last updated: <?= h(formatCoachDateTime((string) ($thread['updated_at'] ?? ''))) ?></p>
-
-    <?php if ($flash): ?>
-        <div class="notice <?= h($flash['type']) ?>">
-            <?= h($flash['message']) ?>
-        </div>
-    <?php endif; ?>
-
-    <div class="card">
-        <h2 style="margin-top: 0;">Update details and refresh recommendation</h2>
-        <form method="POST" action="../../api/coach/update.php">
+    <article class="zz-card zz-coach-start">
+        <form method="POST" action="../../api/coach/update.php" class="zz-coach-form" data-coach-char-form>
             <input type="hidden" name="csrf_token" value="<?= h(getCsrfToken()) ?>">
-            <input type="hidden" name="thread_id" value="<?= $threadId ?>">
+            <input type="hidden" name="thread_id" value="<?= h((string) $threadId) ?>">
 
-            <label for="situation_text"><strong>Describe what is going on</strong></label>
-            <textarea id="situation_text" name="situation_text" rows="5" maxlength="1200" required><?= h($formData['situation_text']) ?></textarea>
+            <div class="zz-field">
+                <label for="situation_text" class="zz-label">What happened?</label>
+                <textarea
+                    id="situation_text"
+                    name="situation_text"
+                    class="zz-textarea zz-textarea--journal"
+                    rows="5"
+                    maxlength="1200"
+                    data-coach-char-source="situation_text"
+                    required
+                ><?= h($formData['situation_text']) ?></textarea>
+                <p class="zz-help zz-coach-charcount" data-coach-char-target="situation_text" aria-live="polite"></p>
+            </div>
 
-            <div class="form-grid" style="margin-top: 10px;">
-                <div>
-                    <label for="situation_type">Situation type</label>
-                    <select id="situation_type" name="situation_type" required>
+            <div class="zz-coach-form__grid">
+                <div class="zz-field">
+                    <label for="situation_type" class="zz-label">Situation type</label>
+                    <select id="situation_type" name="situation_type" class="zz-select" required>
                         <?php foreach (getCoachSituationTypes() as $type): ?>
                             <option value="<?= h($type) ?>" <?= $formData['situation_type'] === $type ? 'selected' : '' ?>>
-                                <?= h(ucfirst($type)) ?>
+                                <?= h(coachTypeLabel((string) $type)) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
 
-                <div>
-                    <label for="time_available">Time available</label>
-                    <select id="time_available" name="time_available" required>
+                <div class="zz-field">
+                    <label for="time_available" class="zz-label">Time available</label>
+                    <select id="time_available" name="time_available" class="zz-select" required>
                         <?php foreach (getCoachTimeOptions() as $minutes): ?>
                             <option value="<?= (int) $minutes ?>" <?= ((int) $formData['time_available'] === (int) $minutes) ? 'selected' : '' ?>>
                                 <?= (int) $minutes ?> min
@@ -215,9 +156,9 @@ function formatCoachDateTime(string $value): string
                     </select>
                 </div>
 
-                <div>
-                    <label for="stress_level">Stress level (1-5)</label>
-                    <select id="stress_level" name="stress_level" required>
+                <div class="zz-field">
+                    <label for="stress_level" class="zz-label">Stress level (1-5)</label>
+                    <select id="stress_level" name="stress_level" class="zz-select" required>
                         <?php for ($i = 1; $i <= 5; $i++): ?>
                             <option value="<?= $i ?>" <?= ((int) $formData['stress_level'] === $i) ? 'selected' : '' ?>>
                                 <?= $i ?>
@@ -227,16 +168,27 @@ function formatCoachDateTime(string $value): string
                 </div>
             </div>
 
-            <div style="margin-top: 10px;">
-                <label for="upcoming_event">Upcoming event (optional)</label>
-                <input id="upcoming_event" name="upcoming_event" type="text" maxlength="120" value="<?= h($formData['upcoming_event']) ?>">
+            <div class="zz-field">
+                <div class="zz-field__header">
+                    <label for="upcoming_event" class="zz-label">Upcoming event</label>
+                    <span class="zz-optional-tag">Optional</span>
+                </div>
+                <input
+                    id="upcoming_event"
+                    name="upcoming_event"
+                    type="text"
+                    maxlength="120"
+                    class="zz-input"
+                    value="<?= h($formData['upcoming_event']) ?>"
+                >
             </div>
 
-            <div class="actions">
-                <button type="submit">Save changes</button>
-                <a class="button-link" href="view.php?id=<?= $threadId ?>">Cancel</a>
+            <div class="zz-coach-form__actions">
+                <button type="submit" class="zz-btn zz-btn--primary">Save Changes</button>
+                <a class="zz-btn zz-btn--ghost" href="<?= h(BASE_URL . '/coach/view.php?id=' . $threadId) ?>">Cancel</a>
             </div>
         </form>
-    </div>
-</body>
-</html>
+    </article>
+</section>
+
+<?php require_once __DIR__ . '/../../includes/partials/footer.php'; ?>
