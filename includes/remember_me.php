@@ -11,7 +11,8 @@ function zz_remember_cookie_options(int $expires): array
         'expires' => $expires,
         'path' => '/',
         'domain' => '',
-        'secure' => !empty($_SERVER['HTTPS']),
+        'secure' => !empty($_SERVER['HTTPS'])
+            || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'),
         'httponly' => true,
         'samesite' => 'Lax',
     ];

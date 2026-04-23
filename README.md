@@ -62,3 +62,17 @@ ZenZone currently uses a local config pattern like:
 Before starting work:
 ```powershell
 git pull
+```
+
+## Running migrations
+Use `sql/migrations/add_auth_tokens.sql` to add the persistent-login token table to existing databases.
+
+Local (XAMPP / phpMyAdmin):
+1. Open phpMyAdmin and select the `zenzone` database.
+2. Go to the `SQL` tab, paste the contents of `sql/migrations/add_auth_tokens.sql`, and run it.
+3. Confirm `auth_tokens` appears in the table list.
+
+Railway (production database):
+1. Open your Railway project and open the database SQL console.
+2. Paste the contents of `sql/migrations/add_auth_tokens.sql` and execute.
+3. Confirm the `auth_tokens` table exists.
