@@ -2049,18 +2049,6 @@ html {
   padding: 1.5rem 0 2rem;
 }
 
-.zz-hero__brand {
-  margin: 0 0 0.9rem;
-}
-
-.zz-hero__brand img {
-  display: block;
-  width: auto;
-  max-height: 30px;
-  max-width: 132px;
-  object-fit: contain;
-}
-
 .zz-hero__eyebrow {
   margin: 0;
   color: var(--zz-sage-deep);
@@ -2441,11 +2429,6 @@ html {
 @media (min-width: 768px) {
   .zz-ptr {
     top: calc(64px + env(safe-area-inset-top) + 0.35rem);
-  }
-
-  .zz-hero__brand img {
-    max-height: 36px;
-    max-width: 156px;
   }
 
   .zz-hero {

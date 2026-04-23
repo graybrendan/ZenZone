@@ -219,9 +219,6 @@ $pageEyebrow = null;
 $pageHelper = null;
 $activeNav = 'home';
 $showBackButton = false;
-$dashboardTopLogoPath = is_file(__DIR__ . '/assets/img/log.png')
-    ? BASE_URL . '/assets/img/log.png'
-    : BASE_URL . '/assets/img/logo.png';
 
 function h($value): string
 {
@@ -286,9 +283,6 @@ function dashboardGoalStatusLabel(array $goal): string
 
 <section class="zz-dashboard-screen zz-dashboard-stack">
     <section class="zz-hero" aria-labelledby="zz-dashboard-greeting">
-        <div class="zz-hero__brand">
-            <img src="<?= h($dashboardTopLogoPath) ?>" alt="ZenZone">
-        </div>
         <p class="zz-hero__eyebrow"><?= h($nowLocal->format('l, F j')) ?></p>
         <h1 id="zz-dashboard-greeting" class="zz-hero__greeting">Good <?= h($timeOfDay) ?>, <?= h($firstName) ?>.</h1>
         <p class="zz-hero__context"><?= h($contextLine) ?></p>
