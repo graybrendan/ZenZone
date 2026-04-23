@@ -108,7 +108,7 @@ $updatedAt = (string) ($thread['last_message_at'] ?? $thread['updated_at'] ?? $t
 $createdLabel = zz_format_datetime($createdAt !== '' ? $createdAt : null);
 $updatedLabel = zz_format_datetime($updatedAt !== '' ? $updatedAt : null);
 
-$pageTitle = 'Coach Situation';
+$pageTitle = 'Your Situation';
 $pageEyebrow = 'Coach';
 $pageHelper = 'Review your recommendation and take the next useful action.';
 $activeNav = 'coach';
