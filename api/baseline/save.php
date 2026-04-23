@@ -23,7 +23,7 @@ if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
     $cookieToken = (string) ($_COOKIE['zz_csrf_token'] ?? '');
 
     error_log(
-        'Baseline CSRF validation failed: sid=' . session_id() .
+        'Baseline CSRF validation failed: session_active=' . (session_status() === PHP_SESSION_ACTIVE ? 'yes' : 'no') .
         ', request_uri=' . (string) ($_SERVER['REQUEST_URI'] ?? '') .
         ', submitted_len=' . strlen($submittedToken) .
         ', session_len=' . strlen($sessionToken) .

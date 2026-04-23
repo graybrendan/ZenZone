@@ -21,7 +21,7 @@ $oldLastName = trim((string) getOldInput('last_name', ''));
 $oldSport = trim((string) getOldInput('sport', ''));
 $oldEmail = trim((string) getOldInput('email', ''));
 clearOldInput();
-$csrfToken = getGuestCsrfToken();
+$csrfToken = getCsrfToken();
 ?>
 <?php require_once __DIR__ . '/../includes/partials/auth_header.php'; ?>
 

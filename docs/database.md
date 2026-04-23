@@ -171,6 +171,10 @@ Main expected relationships:
 - `goals`
 - `goal_checkins`
 - `auth_tokens`
+- `login_rate_limits`
+- `coach_threads`
+- `coach_messages`
+- `coach_outcomes`
 
 
 ## Import troubleshooting (phpMyAdmin / XAMPP)

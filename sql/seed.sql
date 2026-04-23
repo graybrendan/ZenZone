@@ -1,0 +1,2 @@
+-- Optional seed data for local development.
+-- Keep empty unless test/demo records are intentionally added.

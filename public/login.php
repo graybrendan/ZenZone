@@ -26,7 +26,7 @@ if ($authMessage !== '') {
 $oldEmail = trim((string) getOldInput('email', ''));
 clearOldInput();
 $hasLoginError = $errorCode !== '';
-$csrfToken = getGuestCsrfToken();
+$csrfToken = getCsrfToken();
 ?>
 <?php require_once __DIR__ . '/../includes/partials/auth_header.php'; ?>
 

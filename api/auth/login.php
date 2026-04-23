@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     authRedirect('login.php');
 }
 
-if (!validateGuestCsrfToken($_POST['csrf_token'] ?? '')) {
+if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
     failLogin('invalid_request');
 }
 

@@ -61,6 +61,7 @@ if (empty($_SESSION['user_id'])) {
 const LOGIN_RATE_LIMIT_MAX_ATTEMPTS = 5;
 const LOGIN_RATE_LIMIT_WINDOW_SECONDS = 300;
 const LOGIN_RATE_LIMIT_LOCK_SECONDS = 600;
+const LOGIN_RATE_LIMIT_TABLE = 'login_rate_limits';
 const AUTH_CSRF_TTL_SECONDS = 7200;
 
 function authRedirect(string $path, array $query = []): void
@@ -327,53 +328,13 @@ function validateSignedAuthCsrfToken(string $submittedToken): bool
 
 function getGuestCsrfToken(): string
 {
-    $timestamp = (string) time();
-    try {
-        $nonce = bin2hex(random_bytes(16));
-    } catch (Exception $e) {
-        $nonce = hash('sha256', uniqid((string) mt_rand(), true));
-        $nonce = substr($nonce, 0, 32);
-    }
-    $payload = $timestamp . '.' . $nonce;
-    $signature = hash_hmac('sha256', $payload, getAuthCsrfSigningKey());
-
-    return $payload . '.' . $signature;
+    // Guests use the same session-bound CSRF token model as authenticated forms.
+    return getCsrfToken();
 }
 
 function validateGuestCsrfToken($submittedToken): bool
 {
-    if (!is_string($submittedToken) || $submittedToken === '') {
-        return false;
-    }
-
-    $parts = explode('.', $submittedToken);
-    if (count($parts) !== 3) {
-        return false;
-    }
-
-    [$timestampRaw, $nonce, $submittedSignature] = $parts;
-    if (!ctype_digit($timestampRaw)) {
-        return false;
-    }
-
-    $timestamp = (int) $timestampRaw;
-    $now = time();
-    if ($timestamp <= 0 || abs($now - $timestamp) > 7200) {
-        return false;
-    }
-
-    if (!preg_match('/^[a-f0-9]{32}$/', $nonce)) {
-        return false;
-    }
-
-    if (!preg_match('/^[a-f0-9]{64}$/', $submittedSignature)) {
-        return false;
-    }
-
-    $payload = $timestampRaw . '.' . $nonce;
-    $expectedSignature = hash_hmac('sha256', $payload, getAuthCsrfSigningKey());
-
-    return hash_equals($expectedSignature, $submittedSignature);
+    return validateCsrfToken($submittedToken);
 }
 
 function validateCsrfToken($submittedToken): bool
@@ -488,48 +449,223 @@ function getClientIpAddress(): string
 
 function getLoginRateLimitStorageKey(): string
 {
-    return sha1(getClientIpAddress());
+    $ip = getClientIpAddress();
+    $email = strtolower(trim((string) ($_POST['email'] ?? '')));
+
+    if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return sha1($ip . '|' . $email);
+    }
+
+    return sha1($ip);
 }
 
-function getLoginRateLimitEntry(): array
+function getDefaultLoginRateLimitEntry(): array
 {
-    if (!isset($_SESSION['login_rate_limits']) || !is_array($_SESSION['login_rate_limits'])) {
-        $_SESSION['login_rate_limits'] = [];
-    }
-
-    $key = getLoginRateLimitStorageKey();
-    if (!isset($_SESSION['login_rate_limits'][$key]) || !is_array($_SESSION['login_rate_limits'][$key])) {
-        $_SESSION['login_rate_limits'][$key] = [
-            'count' => 0,
-            'window_start' => time(),
-            'lock_until' => 0,
-        ];
-    }
-
-    return $_SESSION['login_rate_limits'][$key];
+    return [
+        'count' => 0,
+        'window_start' => time(),
+        'lock_until' => 0,
+    ];
 }
 
-function setLoginRateLimitEntry(array $entry): void
+function normalizeLoginRateLimitEntry(array $entry): array
 {
-    if (!isset($_SESSION['login_rate_limits']) || !is_array($_SESSION['login_rate_limits'])) {
-        $_SESSION['login_rate_limits'] = [];
-    }
-
-    $key = getLoginRateLimitStorageKey();
-    $_SESSION['login_rate_limits'][$key] = [
+    return [
         'count' => max(0, (int) ($entry['count'] ?? 0)),
         'window_start' => (int) ($entry['window_start'] ?? time()),
         'lock_until' => max(0, (int) ($entry['lock_until'] ?? 0)),
     ];
 }
 
+function getLoginRateLimitDb(): ?PDO
+{
+    if (!function_exists('getDB')) {
+        require_once __DIR__ . '/db.php';
+    }
+
+    try {
+        return getDB();
+    } catch (Throwable $e) {
+        error_log('Login rate limit DB bootstrap failed: ' . $e->getMessage());
+        return null;
+    }
+}
+
+function loginRateLimitTableAvailable(?PDO $db): bool
+{
+    if (!$db instanceof PDO) {
+        return false;
+    }
+
+    static $tableAvailable = null;
+    if (is_bool($tableAvailable)) {
+        return $tableAvailable;
+    }
+
+    try {
+        $stmt = $db->prepare("
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name = :table_name
+            LIMIT 1
+        ");
+        $stmt->execute([
+            'table_name' => LOGIN_RATE_LIMIT_TABLE,
+        ]);
+        $tableAvailable = (bool) $stmt->fetchColumn();
+    } catch (Throwable $e) {
+        error_log('Login rate limit table check failed: ' . $e->getMessage());
+        $tableAvailable = false;
+    }
+
+    return $tableAvailable;
+}
+
+function getLoginRateLimitEntryFromDb(PDO $db, string $key): ?array
+{
+    $stmt = $db->prepare("
+        SELECT attempt_count, window_start, lock_until
+        FROM login_rate_limits
+        WHERE rate_key = :rate_key
+        LIMIT 1
+    ");
+    $stmt->execute(['rate_key' => $key]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!is_array($row)) {
+        return null;
+    }
+
+    return normalizeLoginRateLimitEntry([
+        'count' => (int) ($row['attempt_count'] ?? 0),
+        'window_start' => (int) ($row['window_start'] ?? 0),
+        'lock_until' => (int) ($row['lock_until'] ?? 0),
+    ]);
+}
+
+function setLoginRateLimitEntryInDb(PDO $db, string $key, array $entry): void
+{
+    $entry = normalizeLoginRateLimitEntry($entry);
+
+    $stmt = $db->prepare("
+        INSERT INTO login_rate_limits (
+            rate_key,
+            attempt_count,
+            window_start,
+            lock_until,
+            updated_at
+        ) VALUES (
+            :rate_key,
+            :attempt_count,
+            :window_start,
+            :lock_until,
+            CURRENT_TIMESTAMP
+        )
+        ON DUPLICATE KEY UPDATE
+            attempt_count = VALUES(attempt_count),
+            window_start = VALUES(window_start),
+            lock_until = VALUES(lock_until),
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    $stmt->execute([
+        'rate_key' => $key,
+        'attempt_count' => $entry['count'],
+        'window_start' => $entry['window_start'],
+        'lock_until' => $entry['lock_until'],
+    ]);
+
+    // Lightweight cleanup to keep table size bounded.
+    if (mt_rand(1, 100) === 1) {
+        $cleanupBefore = time() - 86400;
+        $cleanupStmt = $db->prepare("
+            DELETE FROM login_rate_limits
+            WHERE lock_until < :cleanup_before
+              AND updated_at < DATE_SUB(NOW(), INTERVAL 1 DAY)
+        ");
+        $cleanupStmt->execute([
+            'cleanup_before' => $cleanupBefore,
+        ]);
+    }
+}
+
+function clearLoginRateLimitEntryInDb(PDO $db, string $key): void
+{
+    $stmt = $db->prepare("
+        DELETE FROM login_rate_limits
+        WHERE rate_key = :rate_key
+        LIMIT 1
+    ");
+    $stmt->execute([
+        'rate_key' => $key,
+    ]);
+}
+
+function getLoginRateLimitEntry(): array
+{
+    $key = getLoginRateLimitStorageKey();
+    $db = getLoginRateLimitDb();
+    if (loginRateLimitTableAvailable($db)) {
+        try {
+            $entry = getLoginRateLimitEntryFromDb($db, $key);
+            if ($entry !== null) {
+                return $entry;
+            }
+        } catch (Throwable $e) {
+            error_log('Login rate limit DB read failed: ' . $e->getMessage());
+        }
+    }
+
+    if (!isset($_SESSION['login_rate_limits']) || !is_array($_SESSION['login_rate_limits'])) {
+        $_SESSION['login_rate_limits'] = [];
+    }
+
+    if (!isset($_SESSION['login_rate_limits'][$key]) || !is_array($_SESSION['login_rate_limits'][$key])) {
+        $_SESSION['login_rate_limits'][$key] = getDefaultLoginRateLimitEntry();
+    }
+
+    return normalizeLoginRateLimitEntry($_SESSION['login_rate_limits'][$key]);
+}
+
+function setLoginRateLimitEntry(array $entry): void
+{
+    $entry = normalizeLoginRateLimitEntry($entry);
+    $key = getLoginRateLimitStorageKey();
+
+    $db = getLoginRateLimitDb();
+    if (loginRateLimitTableAvailable($db)) {
+        try {
+            setLoginRateLimitEntryInDb($db, $key, $entry);
+            return;
+        } catch (Throwable $e) {
+            error_log('Login rate limit DB write failed: ' . $e->getMessage());
+        }
+    }
+
+    if (!isset($_SESSION['login_rate_limits']) || !is_array($_SESSION['login_rate_limits'])) {
+        $_SESSION['login_rate_limits'] = [];
+    }
+
+    $_SESSION['login_rate_limits'][$key] = $entry;
+}
+
 function clearFailedLoginAttempts(): void
 {
+    $key = getLoginRateLimitStorageKey();
+    $db = getLoginRateLimitDb();
+    if (loginRateLimitTableAvailable($db)) {
+        try {
+            clearLoginRateLimitEntryInDb($db, $key);
+            return;
+        } catch (Throwable $e) {
+            error_log('Login rate limit DB clear failed: ' . $e->getMessage());
+        }
+    }
+
     if (!isset($_SESSION['login_rate_limits']) || !is_array($_SESSION['login_rate_limits'])) {
         return;
     }
 
-    $key = getLoginRateLimitStorageKey();
     unset($_SESSION['login_rate_limits'][$key]);
 }
 
@@ -586,6 +722,10 @@ function recordFailedLoginAttempt(): void
 
 function loginUser(array $user): void
 {
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_regenerate_id(true);
+    }
+
     $_SESSION['user_id'] = (int) ($user['id'] ?? 0);
     $_SESSION['user_name'] = (string) ($user['full_name'] ?? '');
     $_SESSION['user_email'] = (string) ($user['email'] ?? '');

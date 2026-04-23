@@ -4,6 +4,16 @@ require_once __DIR__ . '/../includes/db.php';
 
 header('Content-Type: application/json');
 
+$isLocalHealthRequest = APP_ENV === 'local' || isLocalRequestHost();
+if (!$isLocalHealthRequest) {
+    http_response_code(404);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Not found',
+    ]);
+    exit;
+}
+
 $response = [
     'status' => 'ok',
     'message' => 'ZenZone API is running',

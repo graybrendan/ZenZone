@@ -172,7 +172,7 @@ require_once __DIR__ . '/../includes/partials/auth_header.php';
 </section>
 
 <section class="zz-landing__capstone">
-    <p>Built as a senior capstone at TODO. &copy; <?= date('Y') ?></p>
+    <p>Built as a senior capstone project. &copy; <?= date('Y') ?></p>
 </section>
 
 <?php require_once __DIR__ . '/../includes/partials/auth_footer.php'; ?>

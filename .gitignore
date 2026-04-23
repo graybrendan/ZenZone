@@ -7,6 +7,10 @@ Thumbs.db
 # Logs
 *.log
 
+# Local cookie/session artifacts
+*.cookies
+zz_*.cookies
+
 # Dependency folders
 vendor/
 node_modules/

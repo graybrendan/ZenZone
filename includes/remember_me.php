@@ -255,6 +255,10 @@ function zz_remember_restore_session(PDO $db): bool
         return false;
     }
 
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_regenerate_id(true);
+    }
+
     $_SESSION['user_id'] = (int) ($user['id'] ?? 0);
     $_SESSION['user_name'] = (string) ($user['full_name'] ?? '');
     $_SESSION['user_email'] = (string) ($user['email'] ?? '');

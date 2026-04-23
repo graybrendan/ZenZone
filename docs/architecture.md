@@ -47,8 +47,8 @@ Examples:
 - auth handlers
 - baseline save
 - goals create/update/delete/check-in
-- content save/progress
-- reflections save
+- content save/progress (currently disabled handlers)
+- reflections save (currently disabled handler)
 
 ### `includes/`
 Purpose:
@@ -158,7 +158,7 @@ Primary responsibility:
 - store user reflections tied to experiences or actions
 
 Likely files involved:
-- `api/reflections/save.php`
+- `api/reflections/save.php` (currently disabled handler)
 
 ## Architectural intent
 The project should stay:

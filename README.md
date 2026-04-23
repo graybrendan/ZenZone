@@ -65,14 +65,19 @@ git pull
 ```
 
 ## Running migrations
-Use `sql/migrations/add_auth_tokens.sql` to add the persistent-login token table to existing databases.
+For fresh installs, import `sql/schema.sql`.
+
+For existing databases, apply the needed files in `sql/migrations/` in date/name order.
+Current security-related migrations include:
+- `sql/migrations/add_auth_tokens.sql`
+- `sql/migrations/2026-04-23_001_login_rate_limits.sql`
 
 Local (XAMPP / phpMyAdmin):
 1. Open phpMyAdmin and select the `zenzone` database.
-2. Go to the `SQL` tab, paste the contents of `sql/migrations/add_auth_tokens.sql`, and run it.
-3. Confirm `auth_tokens` appears in the table list.
+2. Go to the `SQL` tab, paste each migration file (in order), and run it.
+3. Confirm new tables appear (for example `auth_tokens`, `login_rate_limits`).
 
 Railway (production database):
 1. Open your Railway project and open the database SQL console.
-2. Paste the contents of `sql/migrations/add_auth_tokens.sql` and execute.
-3. Confirm the `auth_tokens` table exists.
+2. Paste each migration file (in order) and execute.
+3. Confirm new tables exist (for example `auth_tokens`, `login_rate_limits`).
