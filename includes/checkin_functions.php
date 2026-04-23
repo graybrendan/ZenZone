@@ -104,20 +104,20 @@ function zenzone_get_previous_checkin(PDO $pdo, int $userId, string $createdAt, 
             created_at,
             entry_score
         FROM check_ins
-        WHERE user_id = :user_id
+        WHERE user_id = ?
           AND (
-                created_at < :created_at_before
-                OR (created_at = :created_at_equal AND id < :id)
+                created_at < ?
+                OR (created_at = ? AND id < ?)
           )
         ORDER BY created_at DESC, id DESC
         LIMIT 1
     ");
 
     $stmt->execute([
-        'user_id' => $userId,
-        'created_at_before' => $createdAt,
-        'created_at_equal' => $createdAt,
-        'id' => $currentId,
+        $userId,
+        $createdAt,
+        $createdAt,
+        $currentId,
     ]);
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -159,19 +159,19 @@ function zenzone_get_checkin_day_position(PDO $pdo, int $userId, array $checkin)
     $beforeStmt = $pdo->prepare("
         SELECT COUNT(*)
         FROM check_ins
-        WHERE user_id = :user_id
-          AND checkin_date = :checkin_date
+        WHERE user_id = ?
+          AND checkin_date = ?
           AND (
-                created_at < :created_at_before
-                OR (created_at = :created_at_equal AND id < :id)
+                created_at < ?
+                OR (created_at = ? AND id < ?)
           )
     ");
     $beforeStmt->execute([
-        'user_id' => $userId,
-        'checkin_date' => $checkinDate,
-        'created_at_before' => $createdAt,
-        'created_at_equal' => $createdAt,
-        'id' => $checkinId,
+        $userId,
+        $checkinDate,
+        $createdAt,
+        $createdAt,
+        $checkinId,
     ]);
 
     $position = ((int) $beforeStmt->fetchColumn()) + 1;

@@ -19,8 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $labels = zenzone_labels();
+$activityText = trim((string) ($_POST['activity_text'] ?? $_POST['activity_context'] ?? ''));
 $rawInput = [
-    'activity_context' => trim((string) ($_POST['activity_context'] ?? '')),
+    'activity_text' => $activityText,
 ];
 
 foreach (array_keys($labels) as $field) {
@@ -40,15 +41,15 @@ foreach (array_keys($labels) as $field) {
     $scores[$field] = (int) $_POST[$field];
 }
 
-if (strlen($rawInput['activity_context']) > 1000) {
-    $rawInput['activity_context'] = substr($rawInput['activity_context'], 0, 1000);
+if (strlen($rawInput['activity_text']) > 1000) {
+    $rawInput['activity_text'] = substr($rawInput['activity_text'], 0, 1000);
 }
 
 try {
     $pdo = getDB();
     $userId = (int) $_SESSION['user_id'];
 
-    $inserted = zenzone_insert_checkin($pdo, $userId, $scores, $rawInput['activity_context']);
+    $inserted = zenzone_insert_checkin($pdo, $userId, $scores, $rawInput['activity_text']);
     $insertedId = (int) ($inserted['id'] ?? 0);
     if ($insertedId <= 0) {
         throw new RuntimeException('Check-in insert did not return a valid id.');
