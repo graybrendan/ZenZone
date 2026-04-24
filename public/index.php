@@ -23,19 +23,6 @@ require_once __DIR__ . '/../includes/partials/auth_header.php';
     </div>
 </section>
 
-<section class="zz-container zz-landing__section zz-landing__section--install-banner" aria-label="Install ZenZone">
-    <div class="zz-alert zz-alert--info zz-install-banner" data-zz-install-banner hidden>
-        <div class="zz-install-banner__content">
-            <p class="zz-install-banner__title">Save ZenZone to your home screen</p>
-            <p class="zz-install-banner__text" data-zz-install-copy>Use your browser menu and choose Add to Home Screen for one-tap daily access.</p>
-        </div>
-        <div class="zz-install-banner__actions">
-            <button type="button" class="zz-btn zz-btn--primary zz-btn--sm" data-zz-install-action hidden>Install</button>
-            <button type="button" class="zz-btn zz-btn--ghost zz-btn--sm" data-zz-install-dismiss>Dismiss</button>
-        </div>
-    </div>
-</section>
-
 <section class="zz-container">
     <div class="zz-landing__features">
         <article class="zz-card zz-feature">
