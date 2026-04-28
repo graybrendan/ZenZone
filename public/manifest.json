@@ -9,8 +9,8 @@
     "standalone",
     "browser"
   ],
-  "background_color": "#FAF8F3",
-  "theme_color": "#7A9B76",
+  "background_color": "#F7F8FA",
+  "theme_color": "#5C8D7B",
   "description": "ZenZone supports mindful check-ins, focused goals, and grounded coaching moments.",
   "icons": [
     {

@@ -15,8 +15,8 @@
         <p class="zz-muted">Calm, premium, wellness-oriented design tokens and reusable interface components for upcoming page integration.</p>
         <div class="zz-inline">
           <span class="zz-badge zz-badge--sage">Sage-led palette</span>
-          <span class="zz-badge zz-badge--gold">Warm accent</span>
-          <span class="zz-badge zz-badge--neutral">Editorial tone</span>
+          <span class="zz-badge zz-badge--gold">Existing gold accents</span>
+          <span class="zz-badge zz-badge--neutral">Blue/purple accents</span>
         </div>
       </header>
 
@@ -26,21 +26,23 @@
           <h3>Color System</h3>
           <p class="zz-muted">Core, utility, and status colors are defined as CSS variables in <code>:root</code>.</p>
           <div class="zz-token-grid">
-            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-sage);"></div><p class="zz-token__name">--zz-sage</p><p class="zz-token__value">#7A9B76</p></article>
-            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-sage-deep);"></div><p class="zz-token__name">--zz-sage-deep</p><p class="zz-token__value">#5B7A59</p></article>
-            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-sage-wash);"></div><p class="zz-token__name">--zz-sage-wash</p><p class="zz-token__value">#E8EDE4</p></article>
-            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-sage-wash-strong);"></div><p class="zz-token__name">--zz-sage-wash-strong</p><p class="zz-token__value">#D4DECB</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-sage);"></div><p class="zz-token__name">--zz-sage</p><p class="zz-token__value">#5C8D7B</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-sage-deep);"></div><p class="zz-token__name">--zz-sage-deep</p><p class="zz-token__value">#446A5B</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-sage-wash);"></div><p class="zz-token__name">--zz-sage-wash</p><p class="zz-token__value">#E8F0EC</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-sage-wash-strong);"></div><p class="zz-token__name">--zz-sage-wash-strong</p><p class="zz-token__value">#D0E0D8</p></article>
             <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-gold);"></div><p class="zz-token__name">--zz-gold</p><p class="zz-token__value">#D4A574</p></article>
             <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-gold-light);"></div><p class="zz-token__name">--zz-gold-light</p><p class="zz-token__value">#F4E4C8</p></article>
-            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-bg);"></div><p class="zz-token__name">--zz-bg</p><p class="zz-token__value">#FAF8F3</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-accent-blue);"></div><p class="zz-token__name">--zz-accent-blue</p><p class="zz-token__value">#3A7CA5</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-accent-purple);"></div><p class="zz-token__name">--zz-accent-purple</p><p class="zz-token__value">#6C63A8</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-bg);"></div><p class="zz-token__name">--zz-bg</p><p class="zz-token__value">#F7F8FA</p></article>
             <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-surface);"></div><p class="zz-token__name">--zz-surface</p><p class="zz-token__value">#FFFFFF</p></article>
-            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-surface-soft);"></div><p class="zz-token__name">--zz-surface-soft</p><p class="zz-token__value">#F5F2E9</p></article>
-            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-ink);"></div><p class="zz-token__name">--zz-ink</p><p class="zz-token__value">#2A2E2B</p></article>
-            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-ink-soft);"></div><p class="zz-token__name">--zz-ink-soft</p><p class="zz-token__value">#4A4F4B</p></article>
-            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-muted);"></div><p class="zz-token__name">--zz-muted</p><p class="zz-token__value">#6B7268</p></article>
-            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-border);"></div><p class="zz-token__name">--zz-border</p><p class="zz-token__value">#E5E1D6</p></article>
-            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-border-strong);"></div><p class="zz-token__name">--zz-border-strong</p><p class="zz-token__value">#CEC9BA</p></article>
-            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-success);"></div><p class="zz-token__name">--zz-success</p><p class="zz-token__value">#5B8A6B</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-surface-soft);"></div><p class="zz-token__name">--zz-surface-soft</p><p class="zz-token__value">#E6EAF0</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-ink);"></div><p class="zz-token__name">--zz-ink</p><p class="zz-token__value">#1F2937</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-ink-soft);"></div><p class="zz-token__name">--zz-ink-soft</p><p class="zz-token__value">#374151</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-muted);"></div><p class="zz-token__name">--zz-muted</p><p class="zz-token__value">#4B5563</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-border);"></div><p class="zz-token__name">--zz-border</p><p class="zz-token__value">#D6DDE7</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-border-strong);"></div><p class="zz-token__name">--zz-border-strong</p><p class="zz-token__value">#B9C3D3</p></article>
+            <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-success);"></div><p class="zz-token__name">--zz-success</p><p class="zz-token__value">#5C8D7B</p></article>
             <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-warning);"></div><p class="zz-token__name">--zz-warning</p><p class="zz-token__value">#C88A3D</p></article>
             <article class="zz-token"><div class="zz-token__swatch" style="background: var(--zz-danger);"></div><p class="zz-token__name">--zz-danger</p><p class="zz-token__value">#B5553F</p></article>
           </div>

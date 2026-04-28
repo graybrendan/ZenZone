@@ -200,8 +200,8 @@ $backHref = $backToResultUrl !== null
                     {
                         label: 'ZenScore',
                         data: zenscoreSeries,
-                        borderColor: '#5B7A59',
-                        backgroundColor: 'rgba(122, 155, 118, 0.18)',
+                        borderColor: '#5C8D7B',
+                        backgroundColor: 'rgba(92, 141, 123, 0.18)',
                         tension: 0.25,
                         fill: true,
                         pointRadius: 3
@@ -242,24 +242,24 @@ $backHref = $backToResultUrl !== null
                     {
                         label: 'Focus',
                         data: focusSeries,
-                        borderColor: '#3A5E98',
-                        backgroundColor: 'rgba(58, 94, 152, 0.10)',
+                        borderColor: '#3A7CA5',
+                        backgroundColor: 'rgba(58, 124, 165, 0.10)',
                         tension: 0.2,
                         pointRadius: 2
                     },
                     {
                         label: 'Confidence',
                         data: confidenceSeries,
-                        borderColor: '#5B7A59',
-                        backgroundColor: 'rgba(91, 122, 89, 0.10)',
+                        borderColor: '#5C8D7B',
+                        backgroundColor: 'rgba(92, 141, 123, 0.10)',
                         tension: 0.2,
                         pointRadius: 2
                     },
                     {
                         label: 'Recovery',
                         data: recoverySeries,
-                        borderColor: '#8C6EA3',
-                        backgroundColor: 'rgba(140, 110, 163, 0.10)',
+                        borderColor: '#6C63A8',
+                        backgroundColor: 'rgba(108, 99, 168, 0.10)',
                         tension: 0.2,
                         pointRadius: 2
                     }
