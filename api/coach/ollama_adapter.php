@@ -58,6 +58,14 @@ function zzCoachOllamaConfigInt(array $constantNames, array $envNames, int $defa
     return $value;
 }
 
+function zzCoachOllamaConfigBool(array $constantNames, array $envNames, bool $default): bool
+{
+    $fallback = $default ? '1' : '0';
+    $value = strtolower(zzCoachOllamaConfigValue($constantNames, $envNames, $fallback));
+
+    return in_array($value, ['1', 'true', 'yes', 'on'], true);
+}
+
 function zzCoachOllamaBearerToken(): string
 {
     $localHeader = trim((string) ($_SERVER['HTTP_X_ZENZONE_ADAPTER_TOKEN'] ?? ''));
@@ -269,6 +277,42 @@ function zzCoachOllamaFallbackSlug(array $input, array $lessonLookup): string
     }
 
     return '';
+}
+
+function zzCoachOllamaFallbackDecision(array $input, array $lessonLookup): array
+{
+    $slug = zzCoachOllamaFallbackSlug($input, $lessonLookup);
+    $type = strtolower(trim((string) ($input['situation_type'] ?? '')));
+
+    $summary = 'Use one short reset action, then return attention to the next controllable rep.';
+    $message = 'Run the reset now, then mark Better, Same, or Worse so you can learn from the outcome.';
+
+    if ($type === 'after mistake') {
+        $summary = 'A quick post-error reset is the best next move. Use the next few minutes to settle emotion and commit to one controllable action.';
+        $message = 'Take the reset now, then get back to the next rep with one clear cue.';
+    } elseif ($type === 'pre-performance nerves') {
+        $summary = 'Bring your arousal down just enough to execute. Use a short breathing or grounding reset before the next performance moment.';
+        $message = 'Settle your body first, then choose one cue for the opening action.';
+    } elseif ($type === 'low focus') {
+        $summary = 'Narrow attention to one cue. The goal is not perfect focus, just a clean return to the next action.';
+        $message = 'Pick one target cue and use it on the next rep.';
+    } elseif ($type === 'frustration / anger') {
+        $summary = 'Name the frustration, release the extra tension, and return to one external cue.';
+        $message = 'Use the reset before the emotion carries into the next action.';
+    } elseif ($type === 'confidence dip') {
+        $summary = 'Shift confidence back to process. Use one cue that connects posture, breath, and the next action.';
+        $message = 'Choose the cue, repeat it once, and act on the next controllable step.';
+    }
+
+    return [
+        'slug' => $slug,
+        'summary' => $summary,
+        'coach_message' => $message,
+        'why_this_works' => '',
+        'when_to_use' => '',
+        'evidence_note' => '',
+        'steps' => [],
+    ];
 }
 
 function zzCoachOllamaResolveDecisionSlug(array $decision, array $input, array $lessonLookup): string
@@ -831,8 +875,17 @@ $payload = zzCoachOllamaReadJsonBody();
 $knowledgeMode = zzCoachOllamaKnowledgeMode($payload);
 $maxResults = zzCoachOllamaMaxResults($payload);
 $retrieval = zzCoachOllamaBuildLocalRetrieval($payload, $knowledgeMode, $maxResults);
-
 $model = zzCoachOllamaConfigValue(['COACH_OLLAMA_MODEL'], ['ZENZONE_COACH_OLLAMA_MODEL'], 'qwen3:0.6b');
+$fastMode = zzCoachOllamaConfigBool(['COACH_OLLAMA_FAST_MODE'], ['ZENZONE_COACH_OLLAMA_FAST_MODE'], true);
+
+if ($fastMode) {
+    $input = is_array($payload['input'] ?? null) ? $payload['input'] : [];
+    $lessonLookup = zzCoachOllamaLessonLookup($payload['lesson_catalog'] ?? []);
+    $decision = zzCoachOllamaFallbackDecision($input, $lessonLookup);
+    $candidate = zzCoachOllamaBuildCoachCandidate($decision, $payload, $knowledgeMode, $retrieval, 'local_fast_mode');
+    zzCoachOllamaSendJson(200, $candidate);
+}
+
 $baseUrl = zzCoachOllamaConfigValue(['COACH_OLLAMA_BASE_URL'], ['ZENZONE_COACH_OLLAMA_BASE_URL'], 'http://localhost:11434');
 $timeoutSeconds = zzCoachOllamaConfigInt(['COACH_OLLAMA_TIMEOUT_SECONDS'], ['ZENZONE_COACH_OLLAMA_TIMEOUT_SECONDS'], 90, 15, 300);
 $numPredict = zzCoachOllamaConfigInt(['COACH_OLLAMA_NUM_PREDICT'], ['ZENZONE_COACH_OLLAMA_NUM_PREDICT'], 280, 180, 700);

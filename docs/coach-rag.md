@@ -36,7 +36,8 @@ Mode is resolved by:
 - `ZENZONE_COACH_AI_TOKEN`
 - `ZENZONE_COACH_AI_TIMEOUT_SECONDS` (default: `30`, clamped `10-120`)
 - `ZENZONE_COACH_OLLAMA_BASE_URL` (default: `http://localhost:11434`)
-- `ZENZONE_COACH_OLLAMA_MODEL` (default: `qwen3:4b`)
+- `ZENZONE_COACH_OLLAMA_MODEL` (default: `qwen3:0.6b`)
+- `ZENZONE_COACH_OLLAMA_FAST_MODE` (default: `true`)
 - `ZENZONE_COACH_OLLAMA_TIMEOUT_SECONDS` (default: `90`, clamped `15-300`)
 - `ZENZONE_COACH_OLLAMA_NUM_PREDICT` (default: `280`, clamped `180-700`)
 - `ZENZONE_COACH_LOCAL_KNOWLEDGE_MANIFEST` (default: `tmp/knowledge-manifests/combined-manifest.json`)
@@ -124,12 +125,15 @@ define('COACH_RETRIEVAL_PROVIDER', 'ollama_local');
 
 define('COACH_OLLAMA_BASE_URL', 'http://127.0.0.1:11434');
 define('COACH_OLLAMA_MODEL', 'qwen3:0.6b');
+define('COACH_OLLAMA_FAST_MODE', '1');
 define('COACH_OLLAMA_TIMEOUT_SECONDS', '120');
 define('COACH_OLLAMA_NUM_PREDICT', '280');
 
 define('COACH_LOCAL_KNOWLEDGE_MANIFEST', 'tmp/knowledge-manifests/combined-manifest.json');
 define('COACH_LOCAL_KNOWLEDGE_DOWNLOAD_DIR', 'tmp/knowledge-downloads');
 ```
+
+`COACH_OLLAMA_FAST_MODE=1` avoids slow per-request local generation and builds the response from ZenZone's lesson catalog plus local retrieval citations. Set it to `0` only when you want the local model to draft wording and can tolerate slower responses.
 
 After editing `includes/config.local.php`:
 1. Restart Apache in XAMPP.
