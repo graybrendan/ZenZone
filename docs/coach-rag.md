@@ -44,6 +44,21 @@ Mode is resolved by:
 - `ZENZONE_COACH_VECTOR_STORE_IDS_EVIDENCE` (comma-separated evidence store IDs)
 - `ZENZONE_COACH_VECTOR_STORE_IDS_REFLECTION` (comma-separated reflection store IDs)
 
+## Source registry + manifest prep
+- Source registry template: `docs/knowledge-sources.json`
+- Validation/manifest script: `scripts/prepare_knowledge_manifest.php`
+
+Run validation only:
+- `C:\xampp\php\php.exe scripts/prepare_knowledge_manifest.php --check-only`
+
+Build manifests for uploader workflows:
+- `C:\xampp\php\php.exe scripts/prepare_knowledge_manifest.php`
+
+Output files are written to:
+- `tmp/knowledge-manifests/combined-manifest.json`
+- `tmp/knowledge-manifests/evidence-manifest.json`
+- `tmp/knowledge-manifests/reflection-manifest.json`
+
 ## Adapter request contract
 ZenZone now sends these retrieval-related fields in the adapter payload:
 - `knowledge_mode`

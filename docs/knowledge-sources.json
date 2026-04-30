@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "updated_at": "2026-04-30",
+  "notes": "Curated source registry for ZenZone Coach retrieval. Keep evidence and reflection separated by mode.",
+  "sources": [
+    {
+      "id": "apa-evidence-based-practice-2006",
+      "title": "Evidence-Based Practice in Psychology",
+      "mode": "evidence",
+      "domain": "psychology",
+      "evidence_tier": "guideline",
+      "population": "general",
+      "risk_level": "low",
+      "last_reviewed_at": "2026-04-30",
+      "source_type": "url",
+      "source_path": "https://aacdrpubs.faculty.ucdavis.edu/wp-content/uploads/sites/211/2015/03/apa001.pdf",
+      "status": "active",
+      "tags": [
+        "evidence-policy",
+        "clinical-boundaries"
+      ]
+    },
+    {
+      "id": "issp-elite-athlete-mental-health-2024",
+      "title": "ISSP Position Stand: Elite Athlete Mental Health Revisited",
+      "mode": "evidence",
+      "domain": "sports_psychology",
+      "evidence_tier": "position_stand",
+      "population": "athletes",
+      "risk_level": "medium",
+      "last_reviewed_at": "2026-04-30",
+      "source_type": "url",
+      "source_path": "https://issponline.org/wp-content/uploads/2025/11/Schinke-et-al.-2024-International-society-of-sport-psychology-position-stand-elite-athlete-mental-health-revisited.pdf",
+      "status": "active",
+      "tags": [
+        "elite-athletes",
+        "mental-health"
+      ]
+    },
+    {
+      "id": "mindfulness-jama-stress-review-2014",
+      "title": "Meditation Programs for Psychological Stress and Well-being",
+      "mode": "evidence",
+      "domain": "mindfulness",
+      "evidence_tier": "systematic_review",
+      "population": "adults",
+      "risk_level": "low",
+      "last_reviewed_at": "2026-04-30",
+      "source_type": "url",
+      "source_path": "https://jamanetwork.com/journals/jamainternalmedicine/fullarticle/1809754",
+      "status": "active",
+      "tags": [
+        "stress",
+        "wellbeing",
+        "mindfulness"
+      ]
+    },
+    {
+      "id": "positive-psychology-interventions-bmc-2013",
+      "title": "The efficacy of positive psychology interventions: a meta-analysis",
+      "mode": "evidence",
+      "domain": "positive_psychology",
+      "evidence_tier": "meta_analysis",
+      "population": "general",
+      "risk_level": "low",
+      "last_reviewed_at": "2026-04-30",
+      "source_type": "url",
+      "source_path": "https://bmcpublichealth.biomedcentral.com/articles/10.1186/1471-2458-13-119",
+      "status": "active",
+      "tags": [
+        "positive-interventions",
+        "wellbeing"
+      ]
+    },
+    {
+      "id": "hermetic-spirituality-historical-imagination",
+      "title": "Hermetic Spirituality and the Historical Imagination",
+      "mode": "reflection",
+      "domain": "hermetic_philosophy",
+      "evidence_tier": "scholarly_reference",
+      "population": "general",
+      "risk_level": "medium",
+      "last_reviewed_at": "2026-04-30",
+      "source_type": "url",
+      "source_path": "https://www.cambridge.org/core/books/hermetic-spirituality-and-the-historical-imagination/hermetic-spirituality-and-the-historical-imagination/603417E7BD197B26F4B5B2735E580EE9",
+      "status": "active",
+      "tags": [
+        "reflection-only",
+        "philosophy"
+      ]
+    },
+    {
+      "id": "example-local-pdf-template",
+      "title": "Local PDF Template Entry (replace me)",
+      "mode": "evidence",
+      "domain": "psychology",
+      "evidence_tier": "rct",
+      "population": "general",
+      "risk_level": "low",
+      "last_reviewed_at": "2026-04-30",
+      "source_type": "file",
+      "source_path": "docs/sources/replace-with-local-file.pdf",
+      "status": "draft",
+      "tags": [
+        "template"
+      ]
+    }
+  ]
+}
