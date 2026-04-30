@@ -62,7 +62,24 @@ function zzCoachAdapterConfigInt(array $constantNames, array $envNames, int $def
 
 function zzCoachAdapterBearerToken(): string
 {
+    $localHeader = trim((string) ($_SERVER['HTTP_X_ZENZONE_ADAPTER_TOKEN'] ?? ''));
+    if ($localHeader !== '') {
+        return $localHeader;
+    }
+
     $header = trim((string) ($_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? ''));
+    if ($header === '' && function_exists('getallheaders')) {
+        $headers = getallheaders();
+        if (is_array($headers)) {
+            foreach ($headers as $name => $value) {
+                if (strtolower((string) $name) === 'authorization') {
+                    $header = trim((string) $value);
+                    break;
+                }
+            }
+        }
+    }
+
     if ($header === '') {
         return '';
     }
@@ -603,7 +620,7 @@ if (empty($vectorStoreIds)) {
     ]);
 }
 
-$model = zzCoachAdapterConfigValue(['COACH_OPENAI_MODEL'], ['ZENZONE_COACH_OPENAI_MODEL'], 'gpt-5.5');
+$model = zzCoachAdapterConfigValue(['COACH_OPENAI_MODEL'], ['ZENZONE_COACH_OPENAI_MODEL'], 'gpt-5.4-mini');
 $timeoutSeconds = zzCoachAdapterConfigInt(['COACH_OPENAI_TIMEOUT_SECONDS'], ['ZENZONE_COACH_OPENAI_TIMEOUT_SECONDS'], 30, 10, 120);
 $maxOutputTokens = zzCoachAdapterConfigInt(['COACH_OPENAI_MAX_OUTPUT_TOKENS'], ['ZENZONE_COACH_OPENAI_MAX_OUTPUT_TOKENS'], 1400, 400, 4000);
 $systemPrompt = trim((string) ($payload['system_prompt'] ?? ''));

@@ -34,14 +34,17 @@ Mode is resolved by:
 - `ZENZONE_COACH_AI_ENABLED`
 - `ZENZONE_COACH_AI_ENDPOINT`
 - `ZENZONE_COACH_AI_TOKEN`
-- `OPENAI_API_KEY` (used by the local OpenAI adapter)
-- `ZENZONE_COACH_OPENAI_MODEL` (default: `gpt-5.5`)
 - `ZENZONE_COACH_AI_TIMEOUT_SECONDS` (default: `30`, clamped `10-120`)
-- `ZENZONE_COACH_OPENAI_TIMEOUT_SECONDS` (default: `30`, clamped `10-120`)
+- `ZENZONE_COACH_OLLAMA_BASE_URL` (default: `http://localhost:11434`)
+- `ZENZONE_COACH_OLLAMA_MODEL` (default: `qwen3:4b`)
+- `ZENZONE_COACH_OLLAMA_TIMEOUT_SECONDS` (default: `90`, clamped `15-300`)
+- `ZENZONE_COACH_OLLAMA_NUM_PREDICT` (default: `280`, clamped `180-700`)
+- `ZENZONE_COACH_LOCAL_KNOWLEDGE_MANIFEST` (default: `tmp/knowledge-manifests/combined-manifest.json`)
+- `ZENZONE_COACH_LOCAL_KNOWLEDGE_DOWNLOAD_DIR` (default: `tmp/knowledge-downloads`)
 - `ZENZONE_COACH_KNOWLEDGE_MODE` (`auto`, `evidence`, `reflection`)
 - `ZENZONE_COACH_REQUIRE_CITATIONS` (`true` by default for evidence)
 - `ZENZONE_COACH_REQUIRE_REFLECTION_CITATIONS` (`false` by default)
-- `ZENZONE_COACH_RETRIEVAL_PROVIDER` (default: `openai_file_search`)
+- `ZENZONE_COACH_RETRIEVAL_PROVIDER` (default: `openai_file_search`; use `ollama_local` for local Ollama)
 - `ZENZONE_COACH_RETRIEVAL_MAX_RESULTS` (default: `6`, clamped `1-50`)
 - `ZENZONE_COACH_RETRIEVAL_MIN_SCORE` (default: `0.0`, clamped `0-1`)
 - `ZENZONE_COACH_VECTOR_STORE_IDS` (comma-separated fallback store IDs)
@@ -95,9 +98,16 @@ Notes:
 - The script skips completed records already present in `openai-upload-map.json` unless `--force` is supplied.
 - No database migration is required.
 
-## Local adapter setup
+## Local Ollama adapter setup
 Adapter endpoint:
-- `api/coach/openai_adapter.php`
+- `api/coach/ollama_adapter.php`
+
+Install Ollama, then pull the recommended small local model:
+- `ollama pull qwen3:0.6b`
+
+If your machine has a dedicated GPU and `qwen3:0.6b` is too weak, try:
+- `ollama pull qwen3:4b`
+- then change `COACH_OLLAMA_MODEL` to `qwen3:4b`.
 
 For XAMPP, the simplest local setup is to create this gitignored file:
 - `includes/config.local.php`
@@ -106,24 +116,26 @@ Example local config:
 ```php
 <?php
 
-define('OPENAI_API_KEY', 'sk-proj-your-real-key');
-
 define('COACH_AI_ENABLED', '1');
-define('COACH_AI_ENDPOINT', 'http://localhost/ZenZone/api/coach/openai_adapter.php');
+define('COACH_AI_ENDPOINT', 'http://127.0.0.1/ZenZone/api/coach/ollama_adapter.php');
 define('COACH_AI_TOKEN', 'make-a-long-random-local-token');
-define('COACH_AI_TIMEOUT_SECONDS', '30');
+define('COACH_AI_TIMEOUT_SECONDS', '120');
+define('COACH_RETRIEVAL_PROVIDER', 'ollama_local');
 
-define('COACH_OPENAI_MODEL', 'gpt-5.5');
-define('COACH_OPENAI_TIMEOUT_SECONDS', '30');
+define('COACH_OLLAMA_BASE_URL', 'http://127.0.0.1:11434');
+define('COACH_OLLAMA_MODEL', 'qwen3:0.6b');
+define('COACH_OLLAMA_TIMEOUT_SECONDS', '120');
+define('COACH_OLLAMA_NUM_PREDICT', '280');
 
-define('COACH_VECTOR_STORE_IDS_EVIDENCE', 'vs_...');
-define('COACH_VECTOR_STORE_IDS_REFLECTION', 'vs_...');
+define('COACH_LOCAL_KNOWLEDGE_MANIFEST', 'tmp/knowledge-manifests/combined-manifest.json');
+define('COACH_LOCAL_KNOWLEDGE_DOWNLOAD_DIR', 'tmp/knowledge-downloads');
 ```
 
 After editing `includes/config.local.php`:
 1. Restart Apache in XAMPP.
-2. Create a Coach situation in the app.
-3. Open the Coach result page and check:
+2. Make sure Ollama is running at `http://127.0.0.1:11434`.
+3. Create a Coach situation in the app.
+4. Open the Coach result page and check:
    - Source mode: `External AI`
    - Knowledge mode: `Evidence` or `Reflection`
    - Sources panel contains citations.

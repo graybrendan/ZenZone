@@ -404,6 +404,7 @@ function generateCoachResponseFromAdapter(array $input): ?array
     $apiToken = getCoachConfigValue('COACH_AI_TOKEN', 'ZENZONE_COACH_AI_TOKEN', '');
     if ($apiToken !== '') {
         $headers[] = 'Authorization: Bearer ' . $apiToken;
+        $headers[] = 'X-ZenZone-Adapter-Token: ' . $apiToken;
     }
 
     $timeoutSeconds = getCoachConfigInt('COACH_AI_TIMEOUT_SECONDS', 'ZENZONE_COACH_AI_TIMEOUT_SECONDS', 30);
