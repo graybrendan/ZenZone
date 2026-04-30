@@ -40,7 +40,22 @@ function getCoachSystemPrompt(array $lessonCatalog): string
     }
   ],
   "coach_message": "Calm action-first message that includes Better / Same / Worse check-in guidance.",
-  "source_mode": "external_ai"
+  "source_mode": "external_ai",
+  "knowledge_mode": "evidence",
+  "citations": [
+    {
+      "title": "Source title if available",
+      "url": "https://example.com/or/source-link",
+      "file_id": "file_abc123",
+      "filename": "source.pdf",
+      "score": 0.84,
+      "evidence_tier": "systematic_review"
+    }
+  ],
+  "retrieval_metadata": {
+    "provider": "openai_file_search",
+    "result_count": 4
+  }
 }
 JSON;
 
@@ -65,6 +80,13 @@ JSON;
         "4. Prefer one best action even when multiple options could work.\n" .
         "5. Respect time pressure heavily (especially 1 or 3 minutes).\n" .
         "6. Keep claims grounded. Avoid sweeping neuroscience claims.\n\n" .
+        "Evidence and grounding rules:\n" .
+        "1. Treat knowledge_mode as a strict routing hint:\n" .
+        "   - evidence: prioritize psychology, sports psychology, mindfulness, and positive psychology evidence.\n" .
+        "   - reflection: you may include philosophical reflection language, but do not present it as clinical evidence.\n" .
+        "2. If require_citations is true, include at least one citation item when crisis_detected is false.\n" .
+        "3. If supporting evidence is weak or missing, say that clearly and keep recommendations conservative.\n" .
+        "4. Never fabricate citations, URLs, file IDs, or source titles.\n\n" .
         "Crisis behavior:\n" .
         "- If crisis language is present, set crisis_detected=true.\n" .
         "- Provide a short, supportive, non-judgmental crisis_message.\n" .
@@ -134,4 +156,3 @@ function buildCoachSystemPromptCatalogLines(array $lessonCatalog): array
 
     return $lines;
 }
-

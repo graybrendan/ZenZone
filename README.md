@@ -57,6 +57,7 @@ ZenZone currently uses a local config pattern like:
 - This project is currently optimized for local XAMPP development.
 - Keep solutions simple and consistent with the existing PHP/MySQL structure.
 - Avoid introducing new frameworks unless clearly necessary.
+- Coach retrieval integration notes are in `docs/coach-rag.md`.
 
 ## Development workflow
 Before starting work:

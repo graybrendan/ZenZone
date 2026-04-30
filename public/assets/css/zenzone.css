@@ -3289,6 +3289,12 @@ html {
   color: var(--zz-ink-soft);
 }
 
+.zz-coach-recommendation__meta {
+  margin: 0.25rem 0 0.5rem;
+  color: var(--zz-muted);
+  font-size: var(--zz-text-sm);
+}
+
 .zz-coach-rec-primary {
   border: 1px solid var(--zz-sage-wash-strong);
   border-radius: var(--zz-radius-md);
@@ -3320,6 +3326,39 @@ html {
 
 .zz-coach-crisis p {
   margin: 0.35rem 0 0;
+}
+
+.zz-coach-sources__meta {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.zz-coach-sources-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.zz-coach-source-item {
+  border: 1px solid var(--zz-border);
+  border-radius: var(--zz-radius-md);
+  background: var(--zz-surface);
+  padding: 0.85rem;
+  list-style: none;
+}
+
+.zz-coach-source-item__title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--zz-ink);
+}
+
+.zz-coach-source-item__meta {
+  margin: 0.35rem 0 0;
+}
+
+.zz-coach-source-item__excerpt {
+  margin: 0.4rem 0 0.65rem;
 }
 
 .zz-coach-details summary {

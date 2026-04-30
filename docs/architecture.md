@@ -137,10 +137,14 @@ Likely files involved:
 ### Coach
 Primary responsibility:
 - guided support or future AI-assisted flow
+- retrieval-aware AI coaching with source citations when external adapter is enabled
 
 Likely files involved:
 - `public/coach/index.php`
+- `public/coach/view.php`
 - `api/coach/submit.php`
+- `includes/coach_engine.php`
+- `includes/coach_system_prompt.php`
 
 ### Content / lessons
 Primary responsibility:

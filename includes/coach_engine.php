@@ -87,14 +87,177 @@ function createCoachSituationSummary(string $situationText, int $maxLength = 180
     return substr($clean, 0, $maxLength - 3) . '...';
 }
 
+function getCoachConfigValue(string $constantName, string $envName, string $default = ''): string
+{
+    if (defined($constantName)) {
+        $value = trim((string) constant($constantName));
+        if ($value !== '') {
+            return $value;
+        }
+    }
+
+    $value = getenv($envName);
+    if ($value === false) {
+        return $default;
+    }
+
+    $value = trim((string) $value);
+    if ($value === '') {
+        return $default;
+    }
+
+    return $value;
+}
+
+function getCoachConfigBool(string $constantName, string $envName, bool $default = false): bool
+{
+    $fallback = $default ? '1' : '0';
+    $value = strtolower(getCoachConfigValue($constantName, $envName, $fallback));
+
+    return in_array($value, ['1', 'true', 'yes', 'on'], true);
+}
+
+function getCoachConfigInt(string $constantName, string $envName, int $default): int
+{
+    $value = getCoachConfigValue($constantName, $envName, (string) $default);
+    if (!preg_match('/^-?\d+$/', $value)) {
+        return $default;
+    }
+
+    return (int) $value;
+}
+
+function getCoachConfigFloat(string $constantName, string $envName, float $default): float
+{
+    $value = getCoachConfigValue($constantName, $envName, (string) $default);
+    if (!is_numeric($value)) {
+        return $default;
+    }
+
+    return (float) $value;
+}
+
+function parseCoachCsvList(string $csv): array
+{
+    if ($csv === '') {
+        return [];
+    }
+
+    $items = array_map('trim', explode(',', $csv));
+    $items = array_values(array_filter($items, static function ($item): bool {
+        return is_string($item) && $item !== '';
+    }));
+
+    return array_values(array_unique($items));
+}
+
+function getCoachReflectionIntentKeywords(): array
+{
+    return [
+        'hermetic',
+        'hermetism',
+        'kybalion',
+        'as above so below',
+        'mentalism',
+        'correspondence',
+        'vibration',
+        'polarity',
+        'rhythm',
+        'cause and effect',
+        'alchemical',
+        'alchemy',
+    ];
+}
+
+function resolveCoachKnowledgeMode(array $input): string
+{
+    $requestedMode = strtolower(trim((string) ($input['knowledge_mode'] ?? '')));
+    if (in_array($requestedMode, ['evidence', 'reflection'], true)) {
+        return $requestedMode;
+    }
+
+    $configuredMode = strtolower(getCoachConfigValue('COACH_KNOWLEDGE_MODE', 'ZENZONE_COACH_KNOWLEDGE_MODE', 'auto'));
+    if (in_array($configuredMode, ['evidence', 'reflection'], true)) {
+        return $configuredMode;
+    }
+
+    $combinedText = strtolower(
+        trim((string) ($input['situation_text'] ?? '') . ' ' . (string) ($input['upcoming_event'] ?? ''))
+    );
+
+    foreach (getCoachReflectionIntentKeywords() as $keyword) {
+        if ($keyword !== '' && strpos($combinedText, $keyword) !== false) {
+            return 'reflection';
+        }
+    }
+
+    return 'evidence';
+}
+
+function shouldCoachRequireCitations(string $knowledgeMode): bool
+{
+    if ($knowledgeMode === 'reflection') {
+        return getCoachConfigBool(
+            'COACH_REQUIRE_REFLECTION_CITATIONS',
+            'ZENZONE_COACH_REQUIRE_REFLECTION_CITATIONS',
+            false
+        );
+    }
+
+    return getCoachConfigBool('COACH_REQUIRE_CITATIONS', 'ZENZONE_COACH_REQUIRE_CITATIONS', true);
+}
+
+function buildCoachRetrievalHints(string $knowledgeMode): array
+{
+    $provider = getCoachConfigValue('COACH_RETRIEVAL_PROVIDER', 'ZENZONE_COACH_RETRIEVAL_PROVIDER', 'openai_file_search');
+    $maxResults = getCoachConfigInt('COACH_RETRIEVAL_MAX_RESULTS', 'ZENZONE_COACH_RETRIEVAL_MAX_RESULTS', 6);
+    if ($maxResults < 1) {
+        $maxResults = 1;
+    }
+    if ($maxResults > 50) {
+        $maxResults = 50;
+    }
+
+    $minScore = getCoachConfigFloat('COACH_RETRIEVAL_MIN_SCORE', 'ZENZONE_COACH_RETRIEVAL_MIN_SCORE', 0.0);
+    if ($minScore < 0) {
+        $minScore = 0.0;
+    }
+    if ($minScore > 1) {
+        $minScore = 1.0;
+    }
+
+    $sharedStores = parseCoachCsvList(
+        getCoachConfigValue('COACH_VECTOR_STORE_IDS', 'ZENZONE_COACH_VECTOR_STORE_IDS', '')
+    );
+    $evidenceStores = parseCoachCsvList(
+        getCoachConfigValue('COACH_VECTOR_STORE_IDS_EVIDENCE', 'ZENZONE_COACH_VECTOR_STORE_IDS_EVIDENCE', '')
+    );
+    $reflectionStores = parseCoachCsvList(
+        getCoachConfigValue('COACH_VECTOR_STORE_IDS_REFLECTION', 'ZENZONE_COACH_VECTOR_STORE_IDS_REFLECTION', '')
+    );
+
+    $modeStores = $knowledgeMode === 'reflection' ? $reflectionStores : $evidenceStores;
+    $vectorStoreIds = !empty($modeStores) ? $modeStores : $sharedStores;
+
+    return [
+        'provider' => $provider,
+        'knowledge_mode' => $knowledgeMode,
+        'vector_store_ids' => $vectorStoreIds,
+        'max_num_results' => $maxResults,
+        'min_score' => $minScore,
+        'include_search_results' => true,
+    ];
+}
+
 function generateCoachResponse(array $input): array
 {
     $normalizedInput = normalizeCoachInput($input);
+    $knowledgeMode = resolveCoachKnowledgeMode($normalizedInput);
     $combinedText = trim($normalizedInput['situation_text'] . ' ' . $normalizedInput['upcoming_event']);
     $crisisScan = detectCoachCrisisLanguage($combinedText);
 
     if (!empty($crisisScan['crisis_detected'])) {
-        return buildCoachCrisisResponse((string) ($crisisScan['crisis_message'] ?? ''), 'rule_based');
+        return buildCoachCrisisResponse((string) ($crisisScan['crisis_message'] ?? ''), 'rule_based', $knowledgeMode);
     }
 
     $adapterResponse = generateCoachResponseFromAdapter($normalizedInput);
@@ -202,8 +365,7 @@ function generateCoachResponseFromAdapter(array $input): ?array
         return null;
     }
 
-    $endpoint = defined('COACH_AI_ENDPOINT') ? (string) COACH_AI_ENDPOINT : (string) getenv('ZENZONE_COACH_AI_ENDPOINT');
-    $endpoint = trim($endpoint);
+    $endpoint = getCoachConfigValue('COACH_AI_ENDPOINT', 'ZENZONE_COACH_AI_ENDPOINT', '');
     if ($endpoint === '' || !filter_var($endpoint, FILTER_VALIDATE_URL)) {
         return null;
     }
@@ -213,6 +375,10 @@ function generateCoachResponseFromAdapter(array $input): ?array
     }
 
     $lessonCatalog = getLessonCatalog();
+    $knowledgeMode = resolveCoachKnowledgeMode($input);
+    $requireCitations = shouldCoachRequireCitations($knowledgeMode);
+    $retrievalHints = buildCoachRetrievalHints($knowledgeMode);
+
     $payload = [
         'system_prompt' => getCoachSystemPrompt($lessonCatalog),
         'response_format' => 'strict_json',
@@ -220,6 +386,13 @@ function generateCoachResponseFromAdapter(array $input): ?array
         'assistant_role' => 'zenzone_coach',
         'input' => $input,
         'lesson_catalog' => getCoachPromptCatalogPayload($lessonCatalog),
+        'knowledge_mode' => $knowledgeMode,
+        'knowledge_contract' => [
+            'require_citations' => $requireCitations,
+            'citation_minimum' => $requireCitations ? 1 : 0,
+            'retrieval' => $retrievalHints,
+            'disallow_fabricated_sources' => true,
+        ],
     ];
 
     $jsonPayload = json_encode($payload);
@@ -228,7 +401,7 @@ function generateCoachResponseFromAdapter(array $input): ?array
     }
 
     $headers = ['Content-Type: application/json'];
-    $apiToken = defined('COACH_AI_TOKEN') ? (string) COACH_AI_TOKEN : (string) getenv('ZENZONE_COACH_AI_TOKEN');
+    $apiToken = getCoachConfigValue('COACH_AI_TOKEN', 'ZENZONE_COACH_AI_TOKEN', '');
     if ($apiToken !== '') {
         $headers[] = 'Authorization: Bearer ' . $apiToken;
     }
@@ -256,16 +429,19 @@ function generateCoachResponseFromAdapter(array $input): ?array
         return null;
     }
 
-    return normalizeExternalCoachResponse($candidate, $input, $lessonCatalog);
+    return normalizeExternalCoachResponse(
+        $candidate,
+        $input,
+        $lessonCatalog,
+        $knowledgeMode,
+        $requireCitations,
+        $retrievalHints
+    );
 }
 
 function isCoachExternalAiEnabled(): bool
 {
-    $enabledRaw = defined('COACH_AI_ENABLED')
-        ? (string) COACH_AI_ENABLED
-        : (string) getenv('ZENZONE_COACH_AI_ENABLED');
-
-    return in_array(strtolower(trim($enabledRaw)), ['1', 'true', 'yes', 'on'], true);
+    return getCoachConfigBool('COACH_AI_ENABLED', 'ZENZONE_COACH_AI_ENABLED', false);
 }
 
 function decodeCoachAdapterPayload(string $rawResponse): ?array
@@ -284,12 +460,12 @@ function decodeCoachAdapterPayload(string $rawResponse): ?array
 
             $containerValue = $decoded[$containerKey];
             if (is_array($containerValue)) {
-                return $containerValue;
+                return mergeCoachAdapterEnvelopeMetadata($containerValue, $decoded);
             }
             if (is_string($containerValue)) {
                 $parsed = decodeCoachJsonFromText($containerValue);
                 if ($parsed !== null) {
-                    return $parsed;
+                    return mergeCoachAdapterEnvelopeMetadata($parsed, $decoded);
                 }
             }
         }
@@ -298,6 +474,32 @@ function decodeCoachAdapterPayload(string $rawResponse): ?array
     }
 
     return decodeCoachJsonFromText($trimmed);
+}
+
+function mergeCoachAdapterEnvelopeMetadata(array $candidate, array $envelope): array
+{
+    $mergeKeys = [
+        'knowledge_mode',
+        'citations',
+        'source_citations',
+        'retrieval_metadata',
+        'retrieval',
+        'retrieval_results',
+        'file_search_results',
+    ];
+
+    foreach ($mergeKeys as $key) {
+        if (array_key_exists($key, $candidate)) {
+            continue;
+        }
+        if (!array_key_exists($key, $envelope)) {
+            continue;
+        }
+
+        $candidate[$key] = $envelope[$key];
+    }
+
+    return $candidate;
 }
 
 function decodeCoachJsonFromText(string $text): ?array
@@ -333,13 +535,239 @@ function decodeCoachJsonFromText(string $text): ?array
     return null;
 }
 
-function normalizeExternalCoachResponse(array $candidate, array $input, array $lessonCatalog): ?array
+function normalizeCoachCitationText(string $text, int $maxLength = 240): string
 {
+    $clean = trim((string) preg_replace('/\s+/', ' ', $text));
+
+    if ($clean === '') {
+        return '';
+    }
+
+    if ($maxLength < 40) {
+        $maxLength = 40;
+    }
+
+    if (strlen($clean) > $maxLength) {
+        $clean = rtrim(substr($clean, 0, $maxLength - 3)) . '...';
+    }
+
+    return $clean;
+}
+
+function normalizeCoachCitationItem($candidate): ?array
+{
+    if (!is_array($candidate)) {
+        return null;
+    }
+
+    $title = normalizeCoachCitationText(
+        (string) (
+            $candidate['title']
+            ?? $candidate['source_title']
+            ?? $candidate['label']
+            ?? $candidate['name']
+            ?? $candidate['filename']
+            ?? ''
+        ),
+        180
+    );
+
+    $urlCandidate = trim((string) ($candidate['url'] ?? $candidate['source_url'] ?? $candidate['link'] ?? ''));
+    $url = '';
+    if ($urlCandidate !== '' && filter_var($urlCandidate, FILTER_VALIDATE_URL)) {
+        $url = $urlCandidate;
+    }
+
+    $fileId = normalizeCoachCitationText((string) ($candidate['file_id'] ?? ''), 80);
+    $filename = normalizeCoachCitationText((string) ($candidate['filename'] ?? ''), 180);
+    $evidenceTier = normalizeCoachCitationText(
+        (string) ($candidate['evidence_tier'] ?? $candidate['tier'] ?? ''),
+        80
+    );
+
+    $score = null;
+    $rawScore = $candidate['score'] ?? $candidate['relevance_score'] ?? null;
+    if (is_numeric($rawScore)) {
+        $score = (float) $rawScore;
+        if ($score < 0) {
+            $score = 0.0;
+        }
+        if ($score > 1) {
+            $score = 1.0;
+        }
+    }
+
+    $excerpt = normalizeCoachCitationText(
+        (string) ($candidate['excerpt'] ?? $candidate['snippet'] ?? $candidate['text'] ?? $candidate['quote'] ?? ''),
+        260
+    );
+
+    if ($title === '' && $url === '' && $fileId === '' && $filename === '' && $excerpt === '') {
+        return null;
+    }
+
+    return [
+        'title' => $title,
+        'url' => $url,
+        'file_id' => $fileId,
+        'filename' => $filename,
+        'score' => $score,
+        'evidence_tier' => $evidenceTier,
+        'excerpt' => $excerpt,
+    ];
+}
+
+function collectCoachCitationCandidates(array $candidate): array
+{
+    $items = [];
+    $listKeys = ['citations', 'source_citations', 'retrieval_results', 'file_search_results', 'sources'];
+
+    foreach ($listKeys as $key) {
+        if (!isset($candidate[$key]) || !is_array($candidate[$key])) {
+            continue;
+        }
+
+        foreach ($candidate[$key] as $item) {
+            $items[] = $item;
+        }
+    }
+
+    $nestedContainers = ['retrieval', 'retrieval_metadata'];
+    foreach ($nestedContainers as $containerKey) {
+        if (!isset($candidate[$containerKey]) || !is_array($candidate[$containerKey])) {
+            continue;
+        }
+
+        foreach (['citations', 'results', 'sources', 'chunks'] as $nestedKey) {
+            if (!isset($candidate[$containerKey][$nestedKey]) || !is_array($candidate[$containerKey][$nestedKey])) {
+                continue;
+            }
+
+            foreach ($candidate[$containerKey][$nestedKey] as $item) {
+                $items[] = $item;
+            }
+        }
+    }
+
+    return $items;
+}
+
+function normalizeCoachCitations(array $candidate): array
+{
+    $rawCandidates = collectCoachCitationCandidates($candidate);
+    $normalized = [];
+    $seen = [];
+
+    foreach ($rawCandidates as $rawItem) {
+        $item = normalizeCoachCitationItem($rawItem);
+        if ($item === null) {
+            continue;
+        }
+
+        $dedupeKey = strtolower(
+            trim(
+                ($item['file_id'] ?? '') . '|' .
+                ($item['filename'] ?? '') . '|' .
+                ($item['url'] ?? '') . '|' .
+                ($item['title'] ?? '')
+            )
+        );
+        if ($dedupeKey === '') {
+            $dedupeKey = md5(json_encode($item) ?: serialize($item));
+        }
+
+        if (isset($seen[$dedupeKey])) {
+            continue;
+        }
+        $seen[$dedupeKey] = true;
+
+        $normalized[] = $item;
+        if (count($normalized) >= 10) {
+            break;
+        }
+    }
+
+    return $normalized;
+}
+
+function normalizeCoachRetrievalMetadata(array $candidate, string $knowledgeMode, array $retrievalHints, int $citationCount): array
+{
+    $rawMetadata = [];
+    if (!empty($candidate['retrieval_metadata']) && is_array($candidate['retrieval_metadata'])) {
+        $rawMetadata = $candidate['retrieval_metadata'];
+    } elseif (!empty($candidate['retrieval']) && is_array($candidate['retrieval'])) {
+        $rawMetadata = $candidate['retrieval'];
+    }
+
+    $provider = normalizeCoachCitationText(
+        (string) ($rawMetadata['provider'] ?? $retrievalHints['provider'] ?? 'openai_file_search'),
+        80
+    );
+
+    $resultCount = (int) ($rawMetadata['result_count'] ?? 0);
+    if ($resultCount <= 0) {
+        foreach (['results', 'chunks', 'sources'] as $resultKey) {
+            if (!empty($rawMetadata[$resultKey]) && is_array($rawMetadata[$resultKey])) {
+                $resultCount = count($rawMetadata[$resultKey]);
+                break;
+            }
+        }
+    }
+    if ($resultCount <= 0) {
+        $resultCount = $citationCount;
+    }
+
+    $queries = [];
+    if (!empty($rawMetadata['queries']) && is_array($rawMetadata['queries'])) {
+        foreach ($rawMetadata['queries'] as $query) {
+            $queryText = normalizeCoachCitationText((string) $query, 160);
+            if ($queryText !== '') {
+                $queries[] = $queryText;
+            }
+        }
+    }
+
+    return [
+        'provider' => $provider,
+        'knowledge_mode' => $knowledgeMode,
+        'vector_store_ids' => $retrievalHints['vector_store_ids'] ?? [],
+        'max_num_results' => (int) ($retrievalHints['max_num_results'] ?? 0),
+        'min_score' => isset($retrievalHints['min_score']) ? (float) $retrievalHints['min_score'] : 0.0,
+        'result_count' => max(0, $resultCount),
+        'queries' => array_slice($queries, 0, 4),
+    ];
+}
+
+function normalizeExternalCoachResponse(
+    array $candidate,
+    array $input,
+    array $lessonCatalog,
+    string $knowledgeMode,
+    bool $requireCitations,
+    array $retrievalHints
+): ?array
+{
+    $candidateKnowledgeMode = strtolower(trim((string) ($candidate['knowledge_mode'] ?? '')));
+    if (in_array($candidateKnowledgeMode, ['evidence', 'reflection'], true)) {
+        $knowledgeMode = $candidateKnowledgeMode;
+    }
+
     $crisisDetected = !empty($candidate['crisis_detected']);
+    $citations = normalizeCoachCitations($candidate);
+    $retrievalMetadata = normalizeCoachRetrievalMetadata(
+        $candidate,
+        $knowledgeMode,
+        $retrievalHints,
+        count($citations)
+    );
 
     if ($crisisDetected) {
         $crisisMessage = trim((string) ($candidate['crisis_message'] ?? ''));
-        return buildCoachCrisisResponse($crisisMessage, 'external_ai');
+        return buildCoachCrisisResponse($crisisMessage, 'external_ai', $knowledgeMode);
+    }
+
+    if ($requireCitations && empty($citations)) {
+        return null;
     }
 
     $topRecommendation = normalizeExternalCoachRecommendation($candidate['top_recommendation'] ?? null, $lessonCatalog, $input);
@@ -417,6 +845,9 @@ function normalizeExternalCoachResponse(array $candidate, array $input, array $l
         'alternatives' => array_slice($alternatives, 0, 2),
         'coach_message' => trim((string) ($candidate['coach_message'] ?? '')),
         'source_mode' => 'external_ai',
+        'knowledge_mode' => $knowledgeMode,
+        'citations' => $citations,
+        'retrieval_metadata' => $retrievalMetadata,
         'input_context' => $input,
     ];
 
@@ -520,6 +951,7 @@ function normalizeExternalCoachRecommendation($candidate, array $lessonCatalog, 
 function generateRuleBasedCoachResponse(array $input): array
 {
     $lessonCatalog = getLessonCatalog();
+    $knowledgeMode = resolveCoachKnowledgeMode($input);
     $ranked = rankCoachRecommendations($input, $lessonCatalog);
     $recommendations = [];
 
@@ -549,6 +981,13 @@ function generateRuleBasedCoachResponse(array $input): array
             'alternatives' => [],
             'coach_message' => 'Take one reset action now, then mark Better, Same, or Worse.',
             'source_mode' => 'rule_based',
+            'knowledge_mode' => $knowledgeMode,
+            'citations' => [],
+            'retrieval_metadata' => [
+                'provider' => 'rule_based',
+                'knowledge_mode' => $knowledgeMode,
+                'result_count' => 0,
+            ],
         ];
     }
 
@@ -560,6 +999,13 @@ function generateRuleBasedCoachResponse(array $input): array
         'alternatives' => array_slice($recommendations, 1, 2),
         'coach_message' => '',
         'source_mode' => 'rule_based',
+        'knowledge_mode' => $knowledgeMode,
+        'citations' => [],
+        'retrieval_metadata' => [
+            'provider' => 'rule_based',
+            'knowledge_mode' => $knowledgeMode,
+            'result_count' => 0,
+        ],
         'input_context' => $input,
     ];
 
@@ -568,7 +1014,7 @@ function generateRuleBasedCoachResponse(array $input): array
     return normalizeCoachResponseShape($response, $lessonCatalog, 'rule_based');
 }
 
-function buildCoachCrisisResponse(string $crisisMessage, string $sourceMode): array
+function buildCoachCrisisResponse(string $crisisMessage, string $sourceMode, string $knowledgeMode = 'evidence'): array
 {
     $message = trim($crisisMessage);
     if ($message === '') {
@@ -583,6 +1029,13 @@ function buildCoachCrisisResponse(string $crisisMessage, string $sourceMode): ar
         'alternatives' => [],
         'coach_message' => 'Pause performance work and contact emergency support or a trusted person now.',
         'source_mode' => $sourceMode,
+        'knowledge_mode' => $knowledgeMode,
+        'citations' => [],
+        'retrieval_metadata' => [
+            'provider' => $sourceMode === 'external_ai' ? 'external_ai' : 'rule_based',
+            'knowledge_mode' => $knowledgeMode,
+            'result_count' => 0,
+        ],
     ];
 
     $response = buildCoachNarrative($response);
@@ -594,6 +1047,47 @@ function normalizeCoachResponseShape(array $response, array $lessonCatalog, stri
 {
     $lessonLookup = getCoachLessonLookup($lessonCatalog);
     $crisisDetected = !empty($response['crisis_detected']);
+    $knowledgeMode = strtolower(trim((string) ($response['knowledge_mode'] ?? 'evidence')));
+    if (!in_array($knowledgeMode, ['evidence', 'reflection'], true)) {
+        $knowledgeMode = 'evidence';
+    }
+
+    $citations = [];
+    if (!empty($response['citations']) && is_array($response['citations'])) {
+        foreach ($response['citations'] as $citationCandidate) {
+            $citation = normalizeCoachCitationItem($citationCandidate);
+            if ($citation === null) {
+                continue;
+            }
+            $citations[] = $citation;
+            if (count($citations) >= 10) {
+                break;
+            }
+        }
+    }
+
+    $retrievalMetadata = [];
+    if (!empty($response['retrieval_metadata']) && is_array($response['retrieval_metadata'])) {
+        $retrievalMetadata = $response['retrieval_metadata'];
+    }
+
+    if (empty($retrievalMetadata)) {
+        $retrievalMetadata = [
+            'provider' => $sourceMode === 'external_ai' ? 'external_ai' : 'rule_based',
+            'knowledge_mode' => $knowledgeMode,
+            'result_count' => count($citations),
+        ];
+    } else {
+        $retrievalMetadata['provider'] = normalizeCoachCitationText(
+            (string) ($retrievalMetadata['provider'] ?? ($sourceMode === 'external_ai' ? 'external_ai' : 'rule_based')),
+            80
+        );
+        $retrievalMetadata['knowledge_mode'] = $knowledgeMode;
+        $retrievalMetadata['result_count'] = max(
+            0,
+            (int) ($retrievalMetadata['result_count'] ?? count($citations))
+        );
+    }
 
     if ($crisisDetected) {
         return [
@@ -604,6 +1098,9 @@ function normalizeCoachResponseShape(array $response, array $lessonCatalog, stri
             'alternatives' => [],
             'coach_message' => sanitizeCoachNarrativeLine((string) ($response['coach_message'] ?? ''), 260),
             'source_mode' => $sourceMode,
+            'knowledge_mode' => $knowledgeMode,
+            'citations' => [],
+            'retrieval_metadata' => $retrievalMetadata,
         ];
     }
 
@@ -631,6 +1128,9 @@ function normalizeCoachResponseShape(array $response, array $lessonCatalog, stri
             'alternatives' => [],
             'coach_message' => sanitizeCoachNarrativeLine((string) ($response['coach_message'] ?? 'Take one reset action now, then mark Better, Same, or Worse.'), 260),
             'source_mode' => $sourceMode,
+            'knowledge_mode' => $knowledgeMode,
+            'citations' => $citations,
+            'retrieval_metadata' => $retrievalMetadata,
         ];
     }
 
@@ -671,6 +1171,9 @@ function normalizeCoachResponseShape(array $response, array $lessonCatalog, stri
         'alternatives' => $alternatives,
         'coach_message' => sanitizeCoachNarrativeLine((string) ($response['coach_message'] ?? ''), 260),
         'source_mode' => $sourceMode,
+        'knowledge_mode' => $knowledgeMode,
+        'citations' => $citations,
+        'retrieval_metadata' => $retrievalMetadata,
     ];
 }
 

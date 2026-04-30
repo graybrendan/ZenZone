@@ -151,6 +151,100 @@ function coachCleanRecommendationText(string $text): string
 
     return $clean;
 }
+
+function coachNormalizeCitationUrl(string $url): string
+{
+    $url = trim($url);
+    if ($url === '') {
+        return '';
+    }
+
+    if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+        return '';
+    }
+
+    return $url;
+}
+
+function coachNormalizeCitationsForView($rawCitations): array
+{
+    if (!is_array($rawCitations)) {
+        return [];
+    }
+
+    $normalized = [];
+    $seen = [];
+
+    foreach ($rawCitations as $rawCitation) {
+        if (!is_array($rawCitation)) {
+            continue;
+        }
+
+        $title = trim((string) ($rawCitation['title'] ?? ''));
+        $filename = trim((string) ($rawCitation['filename'] ?? ''));
+        $fileId = trim((string) ($rawCitation['file_id'] ?? ''));
+        $url = coachNormalizeCitationUrl((string) ($rawCitation['url'] ?? ''));
+        $excerpt = trim((string) ($rawCitation['excerpt'] ?? ''));
+        $evidenceTier = trim((string) ($rawCitation['evidence_tier'] ?? ''));
+
+        $score = null;
+        $rawScore = $rawCitation['score'] ?? null;
+        if (is_numeric($rawScore)) {
+            $score = (float) $rawScore;
+            if ($score < 0) {
+                $score = 0.0;
+            }
+            if ($score > 1) {
+                $score = 1.0;
+            }
+        }
+
+        if ($title === '' && $filename === '' && $url === '' && $excerpt === '') {
+            continue;
+        }
+
+        $dedupeKey = strtolower($fileId . '|' . $filename . '|' . $url . '|' . $title);
+        if ($dedupeKey === '') {
+            $dedupeKey = md5(json_encode($rawCitation) ?: serialize($rawCitation));
+        }
+        if (isset($seen[$dedupeKey])) {
+            continue;
+        }
+        $seen[$dedupeKey] = true;
+
+        $normalized[] = [
+            'title' => $title,
+            'filename' => $filename,
+            'file_id' => $fileId,
+            'url' => $url,
+            'excerpt' => $excerpt,
+            'evidence_tier' => $evidenceTier,
+            'score' => $score,
+        ];
+
+        if (count($normalized) >= 10) {
+            break;
+        }
+    }
+
+    return $normalized;
+}
+
+$sourceMode = strtolower(trim((string) ($coachResponse['source_mode'] ?? 'rule_based')));
+$knowledgeMode = strtolower(trim((string) ($coachResponse['knowledge_mode'] ?? 'evidence')));
+if (!in_array($knowledgeMode, ['evidence', 'reflection'], true)) {
+    $knowledgeMode = 'evidence';
+}
+
+$citations = coachNormalizeCitationsForView($coachResponse['citations'] ?? []);
+$retrievalMetadata = is_array($coachResponse['retrieval_metadata'] ?? null)
+    ? $coachResponse['retrieval_metadata']
+    : [];
+$retrievalProvider = trim((string) ($retrievalMetadata['provider'] ?? ''));
+$retrievalResultCount = (int) ($retrievalMetadata['result_count'] ?? count($citations));
+if ($retrievalResultCount < 0) {
+    $retrievalResultCount = 0;
+}
 ?>
 <?php require_once __DIR__ . '/../../includes/partials/header.php'; ?>
 
@@ -173,6 +267,11 @@ function coachCleanRecommendationText(string $text): string
 
     <article class="zz-card zz-coach-recommendation" aria-labelledby="zz-coach-recommendation-title">
         <h3 id="zz-coach-recommendation-title" class="zz-coach-card-title">Recommendation</h3>
+        <p class="zz-coach-recommendation__meta">
+            Source mode: <?= h($sourceMode === 'external_ai' ? 'External AI' : 'Rule-based') ?>
+            <span aria-hidden="true">&middot;</span>
+            Knowledge mode: <?= h($knowledgeMode === 'reflection' ? 'Reflection' : 'Evidence') ?>
+        </p>
 
         <?php if (!empty($coachResponse['crisis_detected'])): ?>
             <div class="zz-alert zz-alert--danger zz-coach-crisis" role="alert">
@@ -248,6 +347,57 @@ function coachCleanRecommendationText(string $text): string
             <?php endif; ?>
         <?php endif; ?>
     </article>
+
+    <?php if ($sourceMode === 'external_ai'): ?>
+        <details class="zz-card zz-coach-details zz-coach-sources">
+            <summary class="zz-section-title">Sources (<?= h((string) count($citations)) ?>)</summary>
+            <p class="zz-help zz-coach-sources__meta">
+                Provider: <?= h($retrievalProvider !== '' ? $retrievalProvider : 'external_ai') ?>
+                <span aria-hidden="true">&middot;</span>
+                Retrieved chunks: <?= h((string) $retrievalResultCount) ?>
+            </p>
+
+            <?php if (!empty($citations)): ?>
+                <ul class="zz-coach-sources-list">
+                    <?php foreach ($citations as $citation): ?>
+                        <?php
+                        $citationTitle = trim((string) ($citation['title'] ?? ''));
+                        $citationFilename = trim((string) ($citation['filename'] ?? ''));
+                        $citationLabel = $citationTitle !== '' ? $citationTitle : ($citationFilename !== '' ? $citationFilename : 'Untitled source');
+                        $citationUrl = trim((string) ($citation['url'] ?? ''));
+                        $citationExcerpt = trim((string) ($citation['excerpt'] ?? ''));
+                        $citationTier = trim((string) ($citation['evidence_tier'] ?? ''));
+                        $citationScore = $citation['score'] ?? null;
+                        ?>
+                        <li class="zz-coach-source-item">
+                            <p class="zz-coach-source-item__title"><?= h($citationLabel) ?></p>
+                            <?php if ($citationTier !== '' || is_numeric($citationScore)): ?>
+                                <p class="zz-help zz-coach-source-item__meta">
+                                    <?php if ($citationTier !== ''): ?>
+                                        Tier: <?= h($citationTier) ?>
+                                    <?php endif; ?>
+                                    <?php if ($citationTier !== '' && is_numeric($citationScore)): ?>
+                                        <span aria-hidden="true">&middot;</span>
+                                    <?php endif; ?>
+                                    <?php if (is_numeric($citationScore)): ?>
+                                        Relevance: <?= h((string) round(((float) $citationScore) * 100)) ?>%
+                                    <?php endif; ?>
+                                </p>
+                            <?php endif; ?>
+                            <?php if ($citationExcerpt !== ''): ?>
+                                <p class="zz-help zz-coach-source-item__excerpt"><?= h($citationExcerpt) ?></p>
+                            <?php endif; ?>
+                            <?php if ($citationUrl !== ''): ?>
+                                <a class="zz-btn zz-btn--ghost zz-btn--sm" href="<?= h($citationUrl) ?>" target="_blank" rel="noopener noreferrer">Open Source</a>
+                            <?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php else: ?>
+                <p class="zz-muted">No source citations were returned for this response.</p>
+            <?php endif; ?>
+        </details>
+    <?php endif; ?>
 
     <?php if (!empty($alternatives)): ?>
         <details class="zz-card zz-coach-details zz-coach-alternatives">
