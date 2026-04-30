@@ -406,12 +406,20 @@ function generateCoachResponseFromAdapter(array $input): ?array
         $headers[] = 'Authorization: Bearer ' . $apiToken;
     }
 
+    $timeoutSeconds = getCoachConfigInt('COACH_AI_TIMEOUT_SECONDS', 'ZENZONE_COACH_AI_TIMEOUT_SECONDS', 30);
+    if ($timeoutSeconds < 10) {
+        $timeoutSeconds = 10;
+    }
+    if ($timeoutSeconds > 120) {
+        $timeoutSeconds = 120;
+    }
+
     $ch = curl_init($endpoint);
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_CONNECTTIMEOUT => 5,
-        CURLOPT_TIMEOUT => 10,
+        CURLOPT_TIMEOUT => $timeoutSeconds,
         CURLOPT_HTTPHEADER => $headers,
         CURLOPT_POSTFIELDS => $jsonPayload,
     ]);

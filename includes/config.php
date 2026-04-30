@@ -194,3 +194,8 @@ define('DB_NAME', $dbName);
 define('DB_USER', $dbUser);
 define('DB_PASS', $dbPass);
 define('BASE_URL', $baseUrl);
+
+$localConfigPath = __DIR__ . '/config.local.php';
+if (is_file($localConfigPath)) {
+    require_once $localConfigPath;
+}

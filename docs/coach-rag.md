@@ -34,6 +34,10 @@ Mode is resolved by:
 - `ZENZONE_COACH_AI_ENABLED`
 - `ZENZONE_COACH_AI_ENDPOINT`
 - `ZENZONE_COACH_AI_TOKEN`
+- `OPENAI_API_KEY` (used by the local OpenAI adapter)
+- `ZENZONE_COACH_OPENAI_MODEL` (default: `gpt-5.5`)
+- `ZENZONE_COACH_AI_TIMEOUT_SECONDS` (default: `30`, clamped `10-120`)
+- `ZENZONE_COACH_OPENAI_TIMEOUT_SECONDS` (default: `30`, clamped `10-120`)
 - `ZENZONE_COACH_KNOWLEDGE_MODE` (`auto`, `evidence`, `reflection`)
 - `ZENZONE_COACH_REQUIRE_CITATIONS` (`true` by default for evidence)
 - `ZENZONE_COACH_REQUIRE_REFLECTION_CITATIONS` (`false` by default)
@@ -58,6 +62,73 @@ Output files are written to:
 - `tmp/knowledge-manifests/combined-manifest.json`
 - `tmp/knowledge-manifests/evidence-manifest.json`
 - `tmp/knowledge-manifests/reflection-manifest.json`
+
+## Knowledge-base upload
+Uploader script:
+- `scripts/upload_knowledge_to_openai.php`
+
+Dry run first:
+- `C:\xampp\php\php.exe scripts/upload_knowledge_to_openai.php --dry-run`
+
+Upload to OpenAI:
+- Set `OPENAI_API_KEY` in the shell or environment.
+- Run `C:\xampp\php\php.exe scripts/upload_knowledge_to_openai.php`
+
+What the uploader does:
+1. Reads `tmp/knowledge-manifests/combined-manifest.json`.
+2. Creates separate OpenAI vector stores for `evidence` and `reflection` if store IDs are not supplied.
+3. Downloads URL sources to `tmp/knowledge-downloads/`.
+4. Uploads each source file to OpenAI Files.
+5. Attaches each file to the correct vector store with source metadata attributes.
+6. Polls vector store file indexing until each file is completed, failed, cancelled, or timed out.
+7. Writes `tmp/knowledge-manifests/openai-upload-map.json`.
+
+To reuse existing vector stores:
+- `C:\xampp\php\php.exe scripts/upload_knowledge_to_openai.php --store-id-evidence=vs_... --store-id-reflection=vs_...`
+
+After a successful upload, copy the vector store IDs from `tmp/knowledge-manifests/openai-upload-map.json` into:
+- `ZENZONE_COACH_VECTOR_STORE_IDS_EVIDENCE`
+- `ZENZONE_COACH_VECTOR_STORE_IDS_REFLECTION`
+
+Notes:
+- `tmp/` is ignored by Git, so upload maps and downloaded source copies stay local.
+- The script skips completed records already present in `openai-upload-map.json` unless `--force` is supplied.
+- No database migration is required.
+
+## Local adapter setup
+Adapter endpoint:
+- `api/coach/openai_adapter.php`
+
+For XAMPP, the simplest local setup is to create this gitignored file:
+- `includes/config.local.php`
+
+Example local config:
+```php
+<?php
+
+define('OPENAI_API_KEY', 'sk-proj-your-real-key');
+
+define('COACH_AI_ENABLED', '1');
+define('COACH_AI_ENDPOINT', 'http://localhost/ZenZone/api/coach/openai_adapter.php');
+define('COACH_AI_TOKEN', 'make-a-long-random-local-token');
+define('COACH_AI_TIMEOUT_SECONDS', '30');
+
+define('COACH_OPENAI_MODEL', 'gpt-5.5');
+define('COACH_OPENAI_TIMEOUT_SECONDS', '30');
+
+define('COACH_VECTOR_STORE_IDS_EVIDENCE', 'vs_...');
+define('COACH_VECTOR_STORE_IDS_REFLECTION', 'vs_...');
+```
+
+After editing `includes/config.local.php`:
+1. Restart Apache in XAMPP.
+2. Create a Coach situation in the app.
+3. Open the Coach result page and check:
+   - Source mode: `External AI`
+   - Knowledge mode: `Evidence` or `Reflection`
+   - Sources panel contains citations.
+
+If the adapter fails, ZenZone falls back to the rule-based Coach response.
 
 ## Adapter request contract
 ZenZone now sends these retrieval-related fields in the adapter payload:
