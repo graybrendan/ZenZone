@@ -14,7 +14,7 @@ $pageDescription = isset($pageDescription) && is_string($pageDescription) && tri
     : 'ZenZone supports mindful check-ins, focused goals, and grounded coaching moments.';
 
 if ($authVariant === 'landing') {
-    $documentTitle = $pageTitle !== '' ? $pageTitle : 'ZenZone — Mindfulness for Athletes';
+    $documentTitle = $pageTitle !== '' ? $pageTitle : 'ZenZone - Mindfulness and Performance Support';
 } else {
     $titlePrefix = $pageTitle !== '' ? $pageTitle : 'ZenZone';
     $documentTitle = $titlePrefix . ' — ZenZone';

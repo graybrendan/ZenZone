@@ -183,7 +183,7 @@ function goalIndexCadenceLabel(array $goal): string
                 </a>
                 <a class="zz-goal-template" href="<?= h(BASE_URL . '/goals/create.php?template=stretch') ?>">
                     <span class="zz-badge zz-badge--sage zz-badge--sm">Body</span>
-                    <strong>Stretch after practice</strong>
+                    <strong>Stretch after training</strong>
                     <span class="zz-muted">Daily</span>
                 </a>
                 <a class="zz-goal-template" href="<?= h(BASE_URL . '/goals/create.php?template=journal') ?>">

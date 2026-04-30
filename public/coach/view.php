@@ -117,16 +117,7 @@ $backHref = BASE_URL . '/coach/index.php';
 
 function coachTypeLabel(string $type): string
 {
-    $normalized = strtolower(trim($type));
-    $normalized = str_replace(['_', '-', '/'], ' ', $normalized);
-    $normalized = preg_replace('/\s+/', ' ', $normalized);
-    $normalized = is_string($normalized) ? trim($normalized) : '';
-
-    if ($normalized === '') {
-        return 'Other';
-    }
-
-    return ucwords($normalized);
+    return coachSituationTypeLabel($type);
 }
 
 function coachCleanRecommendationText(string $text): string

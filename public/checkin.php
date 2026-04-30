@@ -172,7 +172,7 @@ function h($value): string
             <p class="zz-help">No pressure - a few words help your future check-ins make sense.</p>
 
             <div class="zz-chip-group zz-chips" data-chip-target="#activity_text">
-                <button type="button" class="zz-chip" data-value="Pre-practice" aria-pressed="false">Pre-practice</button>
+                <button type="button" class="zz-chip" data-value="Pre-session" aria-pressed="false">Pre-session</button>
                 <button type="button" class="zz-chip" data-value="Between classes" aria-pressed="false">Between classes</button>
                 <button type="button" class="zz-chip" data-value="After a tough day" aria-pressed="false">After a tough day</button>
                 <button type="button" class="zz-chip" data-value="Winding down" aria-pressed="false">Winding down</button>
@@ -185,7 +185,7 @@ function h($value): string
                 class="zz-textarea zz-textarea--journal"
                 rows="4"
                 maxlength="1000"
-                placeholder="Pre-practice, between classes, winding down..."
+                placeholder="Pre-session, between classes, winding down..."
             ><?= h($formValues['activity_text']) ?></textarea>
         </div>
 

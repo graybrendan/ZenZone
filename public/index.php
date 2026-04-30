@@ -8,7 +8,7 @@ if (!empty($_SESSION['user_id'])) {
 }
 
 $authVariant = 'landing';
-$pageTitle = 'ZenZone - Mindfulness for Athletes';
+$pageTitle = 'ZenZone - Mindfulness and Performance Support';
 $pageDescription = 'ZenZone is a mindfulness and performance support app built for daily check-ins, goals, and coaching moments.';
 
 require_once __DIR__ . '/../includes/partials/auth_header.php';
@@ -56,7 +56,7 @@ require_once __DIR__ . '/../includes/partials/auth_header.php';
                 </svg>
             </span>
             <h3>A coach in your pocket.</h3>
-            <p>When something's off - pre-game nerves, a rough practice, a low stretch - get one grounded next step.</p>
+            <p>When something's off - pre-event nerves, a rough session, a low stretch - get one grounded next step.</p>
         </article>
     </div>
 </section>
@@ -65,7 +65,7 @@ require_once __DIR__ . '/../includes/partials/auth_header.php';
     <article class="zz-card zz-landing__info-card">
         <p class="zz-section-title zz-landing__eyebrow">START HERE</p>
         <h2 id="zz-landing-about-title">What is ZenZone?</h2>
-        <p>ZenZone is a simple daily system for mental performance. You check in, track patterns, and take one clear next step so you can stay consistent during training and competition.</p>
+        <p>ZenZone is a simple daily system for mental performance. You check in, track patterns, and take one clear next step so you can stay consistent during training, work, performance, and competition.</p>
 
         <div class="zz-grid zz-grid--3">
             <section>

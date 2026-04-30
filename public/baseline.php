@@ -33,13 +33,13 @@ $dimensions = [
     ],
     'energy' => [
         'label' => 'Energy',
-        'helper' => 'How has you physical and mental fuel tank been recently?',
+        'helper' => 'How has your physical and mental fuel tank been recently?',
         'low' => 'Depleted',
         'high' => 'Energized',
     ],
     'connectedness' => [
         'label' => 'Connectedness',
-        'helper' => 'How close do you feel to teammates, friends, and other people around you?',
+        'helper' => 'How close do you feel to teammates, classmates, coworkers, friends, and other people around you?',
         'low' => 'Isolated',
         'high' => 'Connected',
     ],

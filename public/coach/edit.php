@@ -105,7 +105,7 @@ $backHref = BASE_URL . '/coach/view.php?id=' . $threadId;
                 <label for="situation_text" class="zz-label">What's happening right now?</label>
                 <p class="zz-help">A sentence or two is enough. The Coach works with whatever you give it.</p>
                 <div class="zz-chip-group zz-chips" data-chip-target="#situation_text">
-                    <button type="button" class="zz-chip" data-value="Before a big game" aria-pressed="false">Before a big game</button>
+                    <button type="button" class="zz-chip" data-value="Before a big event" aria-pressed="false">Before a big event</button>
                     <button type="button" class="zz-chip" data-value="After a mistake" aria-pressed="false">After a mistake</button>
                     <button type="button" class="zz-chip" data-value="Feeling unmotivated" aria-pressed="false">Feeling unmotivated</button>
                     <button type="button" class="zz-chip" data-value="Intense pressure" aria-pressed="false">Intense pressure</button>
@@ -117,7 +117,7 @@ $backHref = BASE_URL . '/coach/view.php?id=' . $threadId;
                     name="situation_text"
                     class="zz-textarea zz-textarea--journal"
                     rows="4"
-                    placeholder="I have a big match tomorrow and I can't stop overthinking my last performance..."
+                    placeholder="I have a big event tomorrow and I can't stop overthinking my last session..."
                     minlength="8"
                     maxlength="1200"
                     required
@@ -132,7 +132,7 @@ $backHref = BASE_URL . '/coach/view.php?id=' . $threadId;
                         <input type="radio" name="situation_type" value="pre-performance nerves" <?= $formData['situation_type'] === 'pre-performance nerves' ? 'checked' : '' ?>>
                         <span class="zz-card-radio__body">
                             <strong>Pre-performance nerves</strong>
-                            <span class="zz-help">Anxiety before a game, event, or big moment</span>
+                            <span class="zz-help">Anxiety before an event, performance, workout, or big moment</span>
                         </span>
                     </label>
                     <label class="zz-card-radio">
@@ -166,8 +166,8 @@ $backHref = BASE_URL . '/coach/view.php?id=' . $threadId;
                     <label class="zz-card-radio">
                         <input type="radio" name="situation_type" value="post-practice reset" <?= $formData['situation_type'] === 'post-practice reset' ? 'checked' : '' ?>>
                         <span class="zz-card-radio__body">
-                            <strong>Post-practice reset</strong>
-                            <span class="zz-help">Winding down after training or competition</span>
+                            <strong>Post-session reset</strong>
+                            <span class="zz-help">Winding down after training, practice, work, or competition</span>
                         </span>
                     </label>
                     <label class="zz-card-radio">

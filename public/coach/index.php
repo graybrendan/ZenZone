@@ -72,7 +72,7 @@ if ($coachStorageReady) {
 }
 
 $pageTitle = 'Coach';
-$pageEyebrow = 'Mental Performance';
+$pageEyebrow = 'Performance Support';
 $pageHelper = 'Describe the moment and get one clear next action.';
 $activeNav = 'coach';
 $showBackButton = false;
@@ -98,7 +98,7 @@ $showBackButton = false;
         <article class="zz-card zz-intro-card zz-coach-intro-card">
             <p class="zz-section-title zz-intro-card__eyebrow">How the Coach Works</p>
             <h2>Describe a moment. Get one clear action.</h2>
-            <p>A <strong>situation</strong> is anything on your mind right now - pre-game nerves, a rough practice, losing focus, a confidence dip, or just needing a reset. Describe what's happening, and the Coach will give you one grounded next step you can use in minutes.</p>
+            <p>A <strong>situation</strong> is anything on your mind right now - pre-event nerves, a rough session, losing focus, a confidence dip, or just needing a reset. Describe what's happening, and the Coach will give you one grounded next step you can use in minutes.</p>
             <div class="zz-intro-card__badges">
                 <span class="zz-badge zz-badge--sage zz-badge--sm">Takes 30 seconds</span>
                 <span class="zz-badge zz-badge--sage zz-badge--sm">Private to you</span>
@@ -120,7 +120,7 @@ $showBackButton = false;
                     <label for="situation_text" class="zz-label">What's happening right now?</label>
                     <p class="zz-help">A sentence or two is enough. The Coach works with whatever you give it.</p>
                     <div class="zz-chip-group zz-chips" data-chip-target="#situation_text">
-                        <button type="button" class="zz-chip" data-value="Before a big game" aria-pressed="false">Before a big game</button>
+                        <button type="button" class="zz-chip" data-value="Before a big event" aria-pressed="false">Before a big event</button>
                         <button type="button" class="zz-chip" data-value="After a mistake" aria-pressed="false">After a mistake</button>
                         <button type="button" class="zz-chip" data-value="Feeling unmotivated" aria-pressed="false">Feeling unmotivated</button>
                         <button type="button" class="zz-chip" data-value="Intense pressure" aria-pressed="false">Intense pressure</button>
@@ -132,7 +132,7 @@ $showBackButton = false;
                         name="situation_text"
                         class="zz-textarea zz-textarea--journal"
                         rows="4"
-                        placeholder="I have a big match tomorrow and I can't stop overthinking my last performance..."
+                        placeholder="I have a big event tomorrow and I can't stop overthinking my last session..."
                         minlength="8"
                         maxlength="1200"
                         required
@@ -147,7 +147,7 @@ $showBackButton = false;
                             <input type="radio" name="situation_type" value="pre-performance nerves" <?= $formData['situation_type'] === 'pre-performance nerves' ? 'checked' : '' ?>>
                             <span class="zz-card-radio__body">
                                 <strong>Pre-performance nerves</strong>
-                                <span class="zz-help">Anxiety before a game, event, or big moment</span>
+                                <span class="zz-help">Anxiety before an event, performance, workout, or big moment</span>
                             </span>
                         </label>
                         <label class="zz-card-radio">
@@ -181,8 +181,8 @@ $showBackButton = false;
                         <label class="zz-card-radio">
                             <input type="radio" name="situation_type" value="post-practice reset" <?= $formData['situation_type'] === 'post-practice reset' ? 'checked' : '' ?>>
                             <span class="zz-card-radio__body">
-                                <strong>Post-practice reset</strong>
-                                <span class="zz-help">Winding down after training or competition</span>
+                                <strong>Post-session reset</strong>
+                                <span class="zz-help">Winding down after training, practice, work, or competition</span>
                             </span>
                         </label>
                         <label class="zz-card-radio">

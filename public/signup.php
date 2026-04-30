@@ -26,7 +26,7 @@ $csrfToken = getCsrfToken();
 <?php require_once __DIR__ . '/../includes/partials/auth_header.php'; ?>
 
 <h1>Create your account</h1>
-<p class="zz-auth__subtitle">One minute now, a calmer practice later.</p>
+<p class="zz-auth__subtitle">One minute now, a steadier next session later.</p>
 
 <form method="post" action="<?= htmlspecialchars(BASE_URL . '/api/auth/register.php', ENT_QUOTES, 'UTF-8') ?>">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
@@ -62,9 +62,10 @@ $csrfToken = getCsrfToken();
     </div>
 
     <div class="zz-field">
-        <label class="zz-label" for="sport">Primary sport</label>
+        <label class="zz-label" for="sport">Primary activity</label>
         <select id="sport" name="sport" class="zz-select" required>
-            <option value="" <?= $oldSport === '' ? 'selected' : '' ?>>Select your sport</option>
+            <option value="" <?= $oldSport === '' ? 'selected' : '' ?>>Select your activity</option>
+            <option value="Fitness / Training" <?= $oldSport === 'Fitness / Training' ? 'selected' : '' ?>>Fitness / Training</option>
             <option value="Basketball" <?= $oldSport === 'Basketball' ? 'selected' : '' ?>>Basketball</option>
             <option value="Soccer" <?= $oldSport === 'Soccer' ? 'selected' : '' ?>>Soccer</option>
             <option value="Football" <?= $oldSport === 'Football' ? 'selected' : '' ?>>Football</option>
@@ -77,6 +78,8 @@ $csrfToken = getCsrfToken();
             <option value="Tennis" <?= $oldSport === 'Tennis' ? 'selected' : '' ?>>Tennis</option>
             <option value="Golf" <?= $oldSport === 'Golf' ? 'selected' : '' ?>>Golf</option>
             <option value="Wrestling" <?= $oldSport === 'Wrestling' ? 'selected' : '' ?>>Wrestling</option>
+            <option value="Performing Arts" <?= $oldSport === 'Performing Arts' ? 'selected' : '' ?>>Performing Arts</option>
+            <option value="General Wellness" <?= $oldSport === 'General Wellness' ? 'selected' : '' ?>>General Wellness</option>
             <option value="Other" <?= $oldSport === 'Other' ? 'selected' : '' ?>>Other</option>
         </select>
     </div>

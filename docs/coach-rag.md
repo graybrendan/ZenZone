@@ -19,7 +19,7 @@ Goal: keep the existing rule-based safety net, while allowing external AI respon
 
 ## Knowledge modes
 - `evidence`:
-  - Intended for psychology, sports psychology, mindfulness, positive psychology material.
+  - Intended for psychology, sport/performance psychology, mindfulness, and positive psychology material.
   - Citation requirement defaults to enabled.
 - `reflection`:
   - Intended for optional philosophical reflection contexts.

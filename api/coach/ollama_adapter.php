@@ -173,7 +173,7 @@ function zzCoachOllamaMaxResults(array $payload): int
 function zzCoachOllamaBuildCompactSystemPrompt(string $knowledgeMode): string
 {
     return implode("\n", [
-        'You are ZenZone Coach, a calm sports psychology and mindfulness support coach for athletes.',
+        'You are ZenZone Coach, a calm performance psychology and mindfulness support coach for training, fitness, sport, performing arts, school, work, and competitive settings.',
         'Return STRICT JSON only. No markdown.',
         'Recommend one ZenZone tool using a slug from the provided lesson_catalog, plus up to two alternatives.',
         'Prefer zero or one alternative if time is limited.',
@@ -284,18 +284,18 @@ function zzCoachOllamaFallbackDecision(array $input, array $lessonLookup): array
     $slug = zzCoachOllamaFallbackSlug($input, $lessonLookup);
     $type = strtolower(trim((string) ($input['situation_type'] ?? '')));
 
-    $summary = 'Use one short reset action, then return attention to the next controllable rep.';
+    $summary = 'Use one short reset action, then return attention to the next controllable step.';
     $message = 'Run the reset now, then mark Better, Same, or Worse so you can learn from the outcome.';
 
     if ($type === 'after mistake') {
         $summary = 'A quick post-error reset is the best next move. Use the next few minutes to settle emotion and commit to one controllable action.';
-        $message = 'Take the reset now, then get back to the next rep with one clear cue.';
+        $message = 'Take the reset now, then get back to the next action with one clear cue.';
     } elseif ($type === 'pre-performance nerves') {
         $summary = 'Bring your arousal down just enough to execute. Use a short breathing or grounding reset before the next performance moment.';
         $message = 'Settle your body first, then choose one cue for the opening action.';
     } elseif ($type === 'low focus') {
         $summary = 'Narrow attention to one cue. The goal is not perfect focus, just a clean return to the next action.';
-        $message = 'Pick one target cue and use it on the next rep.';
+        $message = 'Pick one target cue and use it on the next action.';
     } elseif ($type === 'frustration / anger') {
         $summary = 'Name the frustration, release the extra tension, and return to one external cue.';
         $message = 'Use the reset before the emotion carries into the next action.';
@@ -335,7 +335,7 @@ function zzCoachOllamaBuildRecommendation(array $lesson, array $decision, array 
 
     $when = zzCoachOllamaCleanText((string) ($decision['when_to_use'] ?? ''), 220);
     if ($when === '') {
-        $when = zzCoachOllamaCleanText((string) ($lesson['when_to_use'] ?? 'Use it before the next rep.'), 220);
+        $when = zzCoachOllamaCleanText((string) ($lesson['when_to_use'] ?? 'Use it before the next action.'), 220);
     }
 
     $steps = [];
@@ -376,7 +376,7 @@ function zzCoachOllamaBuildCoachCandidate(
 
     $summary = zzCoachOllamaCleanText((string) ($decision['summary'] ?? ''), 220);
     if ($summary === '') {
-        $summary = 'Use one short reset action, then return attention to the next controllable rep.';
+        $summary = 'Use one short reset action, then return attention to the next controllable step.';
     }
 
     $coachMessage = zzCoachOllamaCleanText((string) ($decision['coach_message'] ?? ''), 220);

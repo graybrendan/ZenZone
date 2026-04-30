@@ -198,7 +198,7 @@ $backHref = BASE_URL . '/goals/details.php?id=' . (int) $goal['id'];
                     </span>
                     <span class="zz-category-option__content">
                         <strong>Mind</strong>
-                        <p class="zz-help">Focus, mental skills, confidence, preparation, and competitive mindset. Goals that sharpen how you think and prepare.</p>
+                        <p class="zz-help">Focus, mental skills, confidence, preparation, and performance mindset. Goals that sharpen how you think and prepare.</p>
                     </span>
                 </label>
 
@@ -209,7 +209,7 @@ $backHref = BASE_URL . '/goals/details.php?id=' . (int) $goal['id'];
                     </span>
                     <span class="zz-category-option__content">
                         <strong>Soul</strong>
-                        <p class="zz-help">Purpose, relationships, gratitude, and emotional grounding. Goals that feed who you are beyond your sport.</p>
+                        <p class="zz-help">Purpose, relationships, gratitude, and emotional grounding. Goals that feed who you are beyond your activity or performance setting.</p>
                     </span>
                 </label>
             </div>

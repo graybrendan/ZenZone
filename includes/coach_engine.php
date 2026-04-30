@@ -918,7 +918,7 @@ function normalizeExternalCoachRecommendation($candidate, array $lessonCatalog, 
     if (empty($steps)) {
         $steps = [
             'Settle your body with one controlled breath.',
-            'Pick one focus cue for the next rep.',
+            'Pick one focus cue for the next action.',
             'Execute the next action with that cue.',
         ];
     }
@@ -1036,7 +1036,7 @@ function buildCoachCrisisResponse(string $crisisMessage, string $sourceMode, str
         'summary' => 'This sounds like a high-distress moment that needs immediate human support.',
         'top_recommendation' => null,
         'alternatives' => [],
-        'coach_message' => 'Pause performance work and contact emergency support or a trusted person now.',
+        'coach_message' => 'Pause performance or training work and contact emergency support or a trusted person now.',
         'source_mode' => $sourceMode,
         'knowledge_mode' => $knowledgeMode,
         'citations' => [],
@@ -1223,7 +1223,7 @@ function normalizeCoachRecommendationShape($candidate, array $lessonLookup): ?ar
         $steps = [
             'Settle your breathing.',
             'Pick one cue for focus.',
-            'Execute the next rep.',
+            'Execute the next action.',
         ];
     }
 

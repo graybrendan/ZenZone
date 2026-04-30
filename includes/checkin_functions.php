@@ -279,7 +279,7 @@ function zenzone_build_checkin_coach_input(array $checkin): array
     $activityText = trim((string) ($checkin['activity_text'] ?? ''));
 
     $activityLower = strtolower($activityText);
-    $performanceKeywords = ['game', 'match', 'race', 'meet', 'performance', 'competition', 'tournament', 'event'];
+    $performanceKeywords = ['game', 'match', 'race', 'meet', 'performance', 'competition', 'tournament', 'event', 'presentation', 'audition', 'workout', 'session'];
 
     $situationType = 'other';
     if (zenzone_text_contains_any($activityLower, $performanceKeywords) && $confidence <= 4) {
@@ -597,7 +597,7 @@ function zenzone_build_recommendation_from_lesson(array $lesson, array $coachInp
     if (empty($steps)) {
         $steps = [
             'Settle your breathing for one full cycle.',
-            'Pick one focus cue for the next rep.',
+            'Pick one focus cue for the next action.',
             'Execute the next action at controlled pace.',
         ];
     }

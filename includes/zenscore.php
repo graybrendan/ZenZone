@@ -396,9 +396,9 @@ function zenzone_recommendation_text(string $field): string
     return match ($field) {
         'mindfulness' => 'Slow down and do a short breathing reset before your next activity.',
         'energy' => 'Choose a recovery-focused next step and reduce unnecessary load.',
-        'connectedness' => 'Reach out to a teammate, coach, or friend before isolating.',
+        'connectedness' => 'Reach out to a teammate, coach, classmate, coworker, or friend before isolating.',
         'motivation' => 'Pick one small action and complete it before thinking bigger.',
-        'confidence' => 'Refocus on one successful rep and the next controllable action.',
+        'confidence' => 'Refocus on one successful action and the next controllable action.',
         'emotional_balance' => 'Pause, ground yourself, and avoid reacting too quickly.',
         'recovery' => 'Prioritize recovery input before pushing intensity again.',
         'readiness' => 'Lower the pressure and focus on preparation before performance.',

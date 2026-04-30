@@ -121,7 +121,7 @@ function getAuthPageMessage(string $page, array $queryParams): string
 
     if ($page === 'signup') {
         if ($errorCode === 'invalid_input') {
-            return 'Please enter a valid first name, last name, sport, email, and password (8+ characters).';
+            return 'Please enter a valid first name, last name, activity, email, and password (8+ characters).';
         }
 
         if ($errorCode === 'email_exists') {

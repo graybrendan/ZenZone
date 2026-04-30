@@ -191,7 +191,7 @@ function buildCoachRecommendationFromLesson(array $lesson, array $input = []): a
     if (empty($steps)) {
         $steps = [
             'Settle your breathing for one cycle.',
-            'Pick one focus cue for the next rep.',
+            'Pick one focus cue for the next action.',
             'Execute the next action at controlled pace.',
         ];
     }
@@ -220,7 +220,7 @@ function buildCoachNarrative(array $response): array
             220
         );
         $response['coach_message'] = sanitizeCoachNarrativeLine(
-            (string) ($response['coach_message'] ?? 'Pause performance work and contact emergency support or a trusted person now.'),
+            (string) ($response['coach_message'] ?? 'Pause performance or training work and contact emergency support or a trusted person now.'),
             220
         );
 
@@ -236,7 +236,7 @@ function buildCoachNarrative(array $response): array
             220
         );
         $response['coach_message'] = sanitizeCoachNarrativeLine(
-            (string) ($response['coach_message'] ?? 'Take one reset action now, then log Better, Same, or Worse and move to the next rep.'),
+            (string) ($response['coach_message'] ?? 'Take one reset action now, then log Better, Same, or Worse and move to the next action.'),
             220
         );
 
@@ -250,12 +250,12 @@ function buildCoachNarrative(array $response): array
     $duration = max(1, (int) ($top['duration_minutes'] ?? $timeAvailable));
 
     $situationLeadMap = [
-        'pre-performance nerves' => 'You sound keyed up before performance',
+        'pre-performance nerves' => 'You sound keyed up before a performance moment',
         'after mistake' => 'You are still carrying the last mistake',
         'low focus' => 'Your attention sounds scattered right now',
         'frustration / anger' => 'You sound frustrated and heated',
         'confidence dip' => 'Your confidence looks shaky in this moment',
-        'post-practice reset' => 'You are in post-practice decompression mode',
+        'post-practice reset' => 'You are in post-session decompression mode',
         'other' => 'You are in a pressure moment',
     ];
 
@@ -275,7 +275,7 @@ function buildCoachNarrative(array $response): array
     $summary .= 'The best move right now is ' . $title . ' to ' . $benefit . '.';
 
     if ($upcomingEvent !== '') {
-        $summary .= ' Use it before ' . $upcomingEvent . ' so you can step into the next rep with steadier focus.';
+        $summary .= ' Use it before ' . $upcomingEvent . ' so you can step into the next action with steadier focus.';
     }
 
     $coachMessage = 'Run ' . $title . ' now for about ' . $duration . ' minute(s). ';
@@ -356,7 +356,7 @@ function applyCoachKeywordWeighting(array &$scores, string $text, array $lessonL
 {
     $groups = [
         [
-            'terms' => ['game', 'match', 'race', 'meet', 'kickoff', 'tipoff', 'start', 'pregame'],
+            'terms' => ['game', 'match', 'race', 'meet', 'kickoff', 'tipoff', 'start', 'pregame', 'event', 'presentation', 'audition', 'workout', 'session'],
             'boosts' => [
                 'pre-performance-grounding' => 90,
                 'box-breathing-reset' => 80,
@@ -364,7 +364,7 @@ function applyCoachKeywordWeighting(array &$scores, string $text, array $lessonL
             ],
         ],
         [
-            'terms' => ['mistake', 'turnover', 'drop', 'missed', 'messed up', 'bad rep'],
+            'terms' => ['mistake', 'turnover', 'drop', 'missed', 'messed up', 'bad rep', 'error'],
             'boosts' => [
                 'reset-after-a-mistake' => 95,
                 'narrow-the-focus' => 70,
@@ -392,7 +392,7 @@ function applyCoachKeywordWeighting(array &$scores, string $text, array $lessonL
             ],
         ],
         [
-            'terms' => ['cool down', 'after practice', 'after training', 'postgame'],
+            'terms' => ['cool down', 'after practice', 'after training', 'after work', 'after session', 'postgame'],
             'boosts' => [
                 'post-practice-reflection' => 90,
                 '60-second-body-scan' => 70,
@@ -746,10 +746,10 @@ function getCoachBenefitPhraseForSlug(string $slug): string
     $map = [
         'box-breathing-reset' => 'settle your body and narrow your attention',
         'physiological-sigh-reset' => 'downshift fast and regain control of your breathing',
-        '60-second-body-scan' => 're-center quickly and release tension before the next rep',
+        '60-second-body-scan' => 're-center quickly and release tension before the next action',
         'reset-after-a-mistake' => 'stop replaying the mistake and return to the next action',
         'pre-performance-grounding' => 're-center before the moment starts',
-        'visualization-for-the-next-rep' => 'lock into the next rep with a clear execution picture',
+        'visualization-for-the-next-rep' => 'lock into the next action with a clear execution picture',
         're-center-after-frustration' => 'settle emotional heat and regain focus',
         'post-practice-reflection' => 'close the session cleanly without rumination',
         'confidence-cue-routine' => 'stabilize confidence around a simple cue',
@@ -760,7 +760,7 @@ function getCoachBenefitPhraseForSlug(string $slug): string
         'weekly-review-reset' => 'translate last period into one clear adjustment for the next one',
     ];
 
-    return $map[$slug] ?? 'reset and regain focus for the next rep';
+    return $map[$slug] ?? 'reset and regain focus for the next action';
 }
 
 function sanitizeCoachNarrativeLine(string $text, int $maxLength = 220): string

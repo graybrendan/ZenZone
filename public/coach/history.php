@@ -93,8 +93,7 @@ $backHref = BASE_URL . '/coach/index.php';
                 <?php
                 $threadId = (int) ($row['id'] ?? 0);
                 $summary = createCoachSituationSummary((string) ($row['summary'] ?? ''), 170);
-                $situationType = trim((string) ($row['situation_type'] ?? ''));
-                $situationTypeLabel = trim((string) preg_replace('/\s+/', ' ', str_replace(['_', '-', '/'], ' ', strtolower($situationType))));
+                $situationTypeLabel = coachSituationTypeLabel((string) ($row['situation_type'] ?? ''));
                 $createdAt = (string) ($row['created_at'] ?? '');
                 $updatedAt = (string) ($row['last_message_at'] ?? $row['updated_at'] ?? $row['created_at'] ?? '');
                 $updatedTimestamp = strtotime($updatedAt !== '' ? $updatedAt : $createdAt);
@@ -105,7 +104,7 @@ $backHref = BASE_URL . '/coach/index.php';
                     <h3 id="zz-coach-history-thread-<?= h((string) $threadId) ?>" class="zz-coach-item__title zz-coach-item__title--clamp"><?= h($summary) ?></h3>
                     <p class="zz-coach-item__meta">
                         <?php if ($situationTypeLabel !== ''): ?>
-                            <span class="zz-badge zz-badge--neutral zz-badge--sm"><?= h(ucwords($situationTypeLabel)) ?></span>
+                            <span class="zz-badge zz-badge--neutral zz-badge--sm"><?= h($situationTypeLabel) ?></span>
                             <span aria-hidden="true">&middot;</span>
                         <?php endif; ?>
                         Created <?= h(zz_format_datetime($createdAt !== '' ? $createdAt : null)) ?>
